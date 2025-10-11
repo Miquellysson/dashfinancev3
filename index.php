@@ -79,6 +79,14 @@ if (!method_exists($ctrl, $method)) {
 try {
     echo $param ? $ctrl->$method($param) : $ctrl->$method();
 } catch (Throwable $e) {
+    error_log('[ARKAFLOW] ' . $e->getMessage() . ' @ ' . $e->getFile() . ':' . $e->getLine());
+    error_log($e->getTraceAsString());
+
     http_response_code(500);
-    echo '<h1>Erro interno</h1><p>' . htmlspecialchars($e->getMessage()) . '</p>';
+    echo '<h1>Erro interno</h1>';
+    echo '<pre>' .
+        htmlspecialchars($e->getMessage(), ENT_QUOTES, 'UTF-8') . "\n" .
+        htmlspecialchars($e->getFile() . ':' . $e->getLine(), ENT_QUOTES, 'UTF-8') . "\n" .
+        htmlspecialchars($e->getTraceAsString(), ENT_QUOTES, 'UTF-8') .
+        '</pre>';
 }
