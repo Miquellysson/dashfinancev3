@@ -1,0 +1,23 @@
+
+=== Ambiente PHP (v3) ===
+Versão PHP:                 8.2.29
+SAPI:                        litespeed
+Timezone:                    UTC
+memory_limit:                2048M
+
+=== Arquivos principais ===
+index.php:                   existe | leitura:SIM | escrita:SIM | perm:0644
+AuthController.php:          existe | leitura:SIM | escrita:SIM | perm:0644
+Auth.php:                    existe | leitura:SIM | escrita:SIM | perm:0644
+Utils.php:                   existe | leitura:SIM | escrita:SIM | perm:0644
+login.php:                   existe | leitura:SIM | escrita:SIM | perm:0644
+config/database.php:         existe | leitura:SIM | escrita:SIM | perm:0644
+.htaccess:                   existe | leitura:SIM | escrita:SIM | perm:0644
+
+=== Banco de dados ===
+Status conexão:             Conectado
+users.total:                 2
+users.amostra:               [{"id":1,"nome_completo":"Administrador","email":"marketing@arkaleads.com","tipo_usuario":"Admin"},{"id":2,"nome_completo":"tainon vargas","email":"tainon@arkaleads.com","tipo_usuario":"Gerente"}]
+status_catalog:              Recebido, Pago, A Receber, Pendente, Em Atraso, Vencido, Parcelado, Cancelado, Pending, Paid, Overdue, Dropped
+payments.colunas:            id, project_id, kind, transaction_type, description, category, amount, currency, due_date, paid_at, status_id, created_at, updated_at
+payments.faltantes:          Nenhuma
