@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <title>Experience Conference 2024</title>
+    <meta name="description" content="Landing page para evento de tecnologia focado em experiências digitais.">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <header class="hero">
+      <nav class="navbar" aria-label="Menu principal">
+        <a class="logo" href="#top" aria-label="Experience Conference 2024">Experience<span>Conf</span></a>
+        <ul class="nav-links">
+          <li><a href="#about">Sobre</a></li>
+          <li><a href="#speakers">Speakers</a></li>
+          <li><a href="#agenda">Agenda</a></li>
+          <li><a href="#tickets">Ingressos</a></li>
+        </ul>
+        <a class="btn btn-outline" href="#tickets">Garanta sua vaga</a>
+      </nav>
+      <div class="hero-content">
+        <p class="hero-kicker">São Paulo • 23-25 Maio</p>
+        <h1>O maior encontro sobre experiências digitais do Brasil</h1>
+        <p class="hero-description">
+          Três dias de palestras, workshops e networking com líderes em produto, UX, growth e tecnologia.
+        </p>
+        <div class="hero-actions">
+          <a class="btn btn-primary" href="#tickets">Comprar ingresso</a>
+          <a class="btn btn-outline" href="#agenda">Ver agenda completa</a>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <section id="about" class="section about">
+        <div class="section-header">
+          <h2>Por que participar?</h2>
+          <p>Uma curadoria de conteúdo pensada para quem constrói experiências digitais que encantam.</p>
+        </div>
+        <div class="card-grid">
+          <article class="card">
+            <h3>Conteúdo relevante</h3>
+            <p>Talks hands-on sobre produto, pesquisa, dados, IA generativa e growth.</p>
+          </article>
+          <article class="card">
+            <h3>Networking</h3>
+            <p>Espaços exclusivos para conexões com líderes e empresas inovadoras.</p>
+          </article>
+          <article class="card">
+            <h3>Workshops</h3>
+            <p>Atividades práticas em grupos reduzidos com especialistas internacionais.</p>
+          </article>
+        </div>
+      </section>
+
+      <section id="speakers" class="section speakers">
+        <div class="section-header">
+          <h2>Speakers confirmados</h2>
+          <p>Profissionais que lideram transformações digitais em escala global.</p>
+        </div>
+        <ul class="speaker-list">
+          <li>
+            <img src="assets/speaker-01.jpg" alt="Foto de Ana Souza" width="200" height="200" loading="lazy">
+            <h3>Ana Souza</h3>
+            <p>Head of Product Design, Nubank</p>
+          </li>
+          <li>
+            <img src="assets/speaker-02.jpg" alt="Foto de Carlos Lima" width="200" height="200" loading="lazy">
+            <h3>Carlos Lima</h3>
+            <p>Director of Growth, Hotmart</p>
+          </li>
+          <li>
+            <img src="assets/speaker-03.jpg" alt="Foto de Júlia Moretti" width="200" height="200" loading="lazy">
+            <h3>Júlia Moretti</h3>
+            <p>Principal Researcher, Globo</p>
+          </li>
+        </ul>
+      </section>
+
+      <section id="agenda" class="section agenda">
+        <div class="section-header">
+          <h2>Programação em destaque</h2>
+          <p>Uma agenda equilibrada entre visão estratégica e execução prática.</p>
+        </div>
+        <div class="timeline">
+          <article>
+            <h3>Dia 1 • Estratégia</h3>
+            <p>Keynotes sobre produto e CX, além de painéis com cases de grandes marcas.</p>
+          </article>
+          <article>
+            <h3>Dia 2 • Execução</h3>
+            <p>Workshops sobre design systems, métricas de sucesso e IA aplicada a UX.</p>
+          </article>
+          <article>
+            <h3>Dia 3 • Comunidade</h3>
+            <p>Mentorias, espaço maker e premiação dos destaques do ano.</p>
+          </article>
+        </div>
+      </section>
+
+      <section id="tickets" class="section tickets">
+        <div class="section-header">
+          <h2>Escolha seu ingresso</h2>
+          <p>Valores promocionais válidos até 15 de abril.</p>
+        </div>
+        <div class="pricing-grid">
+          <article class="pricing-card">
+            <h3>Early Bird</h3>
+            <p class="price">R$ 690</p>
+            <ul>
+              <li>Acesso aos 3 dias</li>
+              <li>Kit Experience</li>
+              <li>Certificado digital</li>
+            </ul>
+            <a class="btn btn-primary btn-block" href="#">Garantir ingresso</a>
+          </article>
+          <article class="pricing-card highlight">
+            <h3>Pro</h3>
+            <p class="price">R$ 890</p>
+            <ul>
+              <li>Assentos reservados</li>
+              <li>2 workshops exclusivos</li>
+              <li>Área VIP de networking</li>
+            </ul>
+            <a class="btn btn-primary btn-block" href="#">Garantir ingresso</a>
+          </article>
+          <article class="pricing-card">
+            <h3>Corporate</h3>
+            <p class="price">R$ 1.290</p>
+            <ul>
+              <li>Pacote para 5 pessoas</li>
+              <li>Mentoria com speakers</li>
+              <li>Relatório pós-evento</li>
+            </ul>
+            <a class="btn btn-primary btn-block" href="#">Solicitar cotação</a>
+          </article>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <div>
+        <p class="mb-1">&copy; <?= date('Y') ?> Experience Conference. Todos os direitos reservados.</p>
+        <a href="mailto:evento@experienceconf.com">evento@experienceconf.com</a>
+      </div>
+      <div class="footer-links" aria-label="Redes sociais">
+        <a href="#" aria-label="Instagram Experience Conference"><i class="fab fa-instagram"></i></a>
+        <a href="#" aria-label="LinkedIn Experience Conference"><i class="fab fa-linkedin"></i></a>
+        <a href="#" aria-label="YouTube Experience Conference"><i class="fab fa-youtube"></i></a>
+      </div>
+    </footer>
+
+    <script src="https://kit.fontawesome.com/a2e0e6ad02.js" crossorigin="anonymous" defer></script>
+  </body>
+</html>

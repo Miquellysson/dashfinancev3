@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Recibo</title>
+  <style>
+    body { font-family: 'Inter', sans-serif; background:#f3f4f6; margin:0; padding:0; }
+    .wrapper { max-width:600px; margin:0 auto; background:#ffffff; padding:32px; border-radius:16px; }
+    .total { font-size:1.5rem; font-weight:700; color:#0A0316; }
+    table { width:100%; border-collapse:collapse; margin-top:24px; }
+    th, td { padding:12px; border-bottom:1px solid #e5e7eb; text-align:left; }
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+    <h1>Resumo de pagamento</h1>
+    <p>Olá {{client_name}}, segue o recibo do seu último pagamento.</p>
+    <table>
+      <thead>
+        <tr><th>Descrição</th><th>Valor</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>{{service_name}}</td><td>{{amount}}</td></tr>
+      </tbody>
+    </table>
+    <p class="total">Total: {{amount}}</p>
+    <p>Qualquer dúvida, fale com nosso time.</p>
+  </div>
+</body>
+</html>
