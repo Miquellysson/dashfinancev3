@@ -32,8 +32,20 @@ CREATE TABLE IF NOT EXISTS clients (
   email VARCHAR(120),
   phone VARCHAR(20),
   address TEXT,
+  entry_date DATE NULL,
+  notes TEXT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS status_catalog (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(80) NOT NULL,
+  color_hex CHAR(7) NOT NULL DEFAULT '#6b7280',
+  sort_order INT NOT NULL DEFAULT 1,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY uk_status_catalog_name (name)
 );
 
 CREATE TABLE IF NOT EXISTS projects (
@@ -152,14 +164,17 @@ CREATE TABLE IF NOT EXISTS templates_library (
 CREATE INDEX idx_templates_category ON templates_library (category);
 CREATE INDEX idx_templates_type ON templates_library (template_type);
 
--- Tabela de metas (para futuras implementações)
 CREATE TABLE IF NOT EXISTS goals (
   id INT AUTO_INCREMENT PRIMARY KEY,
-  title VARCHAR(150) NOT NULL,
-  description TEXT,
+  period_type ENUM('daily','weekly','biweekly','monthly','quarterly') NOT NULL DEFAULT 'monthly',
+  period_start DATE NOT NULL DEFAULT '1970-01-01',
+  period_end DATE NOT NULL DEFAULT '1970-01-01',
+  target_value DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+  title VARCHAR(150) NULL,
+  description TEXT NULL,
   target_amount DECIMAL(12,2) DEFAULT 0.00,
   current_amount DECIMAL(12,2) DEFAULT 0.00,
-  target_date DATE,
+  target_date DATE NULL,
   achieved TINYINT(1) DEFAULT 0,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
@@ -175,11 +190,33 @@ VALUES
 ON DUPLICATE KEY UPDATE nome_completo=VALUES(nome_completo);
 
 -- Dados de exemplo (opcional)
-INSERT INTO clients (name, email, phone, address) VALUES
-('Empresa ABC Ltda', 'contato@empresaabc.com', '(11) 99999-9999', 'Rua das Flores, 123 - São Paulo/SP'),
-('João Silva', 'joao@email.com', '(11) 88888-8888', 'Av. Paulista, 456 - São Paulo/SP'),
-('Maria Santos', 'maria@email.com', '(11) 77777-7777', 'Rua Augusta, 789 - São Paulo/SP')
-ON DUPLICATE KEY UPDATE name=VALUES(name);
+INSERT INTO clients (name, email, phone, address, entry_date, notes) VALUES
+('Empresa ABC Ltda', 'contato@empresaabc.com', '(11) 99999-9999', 'Rua das Flores, 123 - São Paulo/SP', '2024-01-05', 'Cliente corporativo com contrato recorrente.'),
+('João Silva', 'joao@email.com', '(11) 88888-8888', 'Av. Paulista, 456 - São Paulo/SP', '2024-02-02', 'Projeto de implantação de CRM.'),
+('Maria Santos', 'maria@email.com', '(11) 77777-7777', 'Rua Augusta, 789 - São Paulo/SP', '2024-03-03', 'Aplicativo mobile com entregas em fases.')
+ON DUPLICATE KEY UPDATE
+  name = VALUES(name),
+  email = VALUES(email),
+  phone = VALUES(phone),
+  address = VALUES(address),
+  entry_date = VALUES(entry_date),
+  notes = VALUES(notes);
+
+INSERT INTO status_catalog (name, color_hex, sort_order)
+VALUES
+('Recebido', '#1cc88a', 1),
+('Pago', '#1cc88a', 2),
+('A Receber', '#f6c23e', 3),
+('Pendente', '#f6c23e', 4),
+('Em Atraso', '#e74a3b', 5),
+('Vencido', '#e74a3b', 6),
+('Parcelado', '#4e73df', 7),
+('Cancelado', '#858796', 8),
+('Pending', '#f6c23e', 9),
+('Paid', '#1cc88a', 10),
+('Overdue', '#e74a3b', 11),
+('Dropped', '#858796', 12)
+ON DUPLICATE KEY UPDATE color_hex = VALUES(color_hex), sort_order = VALUES(sort_order);
 
 INSERT INTO projects (
   client_id, nome_cliente, name, data_entrada, tipo_servico,
@@ -191,10 +228,31 @@ INSERT INTO projects (
 (3, 'Maria Santos', 'App Mobile Delivery', '2024-03-01 14:00:00', 'Desenvolvimento Web', 'Parcialmente Satisfeito', 'pausado', 12000.00, 'Cancelado', 6000.00, 6000.00, 'Projeto pausado aguardando orçamento adicional')
 ON DUPLICATE KEY UPDATE name=VALUES(name);
 
-INSERT INTO payments (project_id, amount, date, description, status) VALUES
-(1, 2500.00, '2024-01-20', 'Pagamento inicial - 50%', 'pago'),
-(1, 2500.00, '2024-02-15', 'Pagamento final - 50%', 'pendente'),
-(2, 4000.00, '2024-02-10', 'Primeira parcela', 'pago'),
-(2, 4000.00, '2024-03-10', 'Segunda parcela', 'pendente'),
-(3, 6000.00, '2024-03-15', 'Entrada do projeto', 'pago')
-ON DUPLICATE KEY UPDATE amount=VALUES(amount);
+INSERT INTO payments (
+  id, project_id, kind, amount, currency, transaction_type,
+  description, category, due_date, paid_at, status_id
+) VALUES
+(1, 1, 'one_time', 2500.00, 'BRL', 'receita',
+ 'Pagamento inicial - 50%', 'Entrada', '2024-01-20', '2024-01-20',
+ (SELECT id FROM status_catalog WHERE name = 'Recebido')),
+(2, 1, 'one_time', 2500.00, 'BRL', 'receita',
+ 'Pagamento final - 50%', 'Conclusão', '2024-02-15', NULL,
+ (SELECT id FROM status_catalog WHERE name = 'A Receber')),
+(3, 2, 'one_time', 4000.00, 'BRL', 'receita',
+ 'Primeira parcela', 'Consultoria', '2024-02-10', '2024-02-12',
+ (SELECT id FROM status_catalog WHERE name = 'Recebido')),
+(4, 2, 'one_time', 4000.00, 'BRL', 'receita',
+ 'Segunda parcela', 'Consultoria', '2024-03-10', NULL,
+ (SELECT id FROM status_catalog WHERE name = 'Em Atraso')),
+(5, 3, 'one_time', 6000.00, 'BRL', 'receita',
+ 'Entrada do projeto', 'App', '2024-03-15', '2024-03-18',
+ (SELECT id FROM status_catalog WHERE name = 'Cancelado'))
+ON DUPLICATE KEY UPDATE
+  amount = VALUES(amount),
+  currency = VALUES(currency),
+  transaction_type = VALUES(transaction_type),
+  description = VALUES(description),
+  category = VALUES(category),
+  due_date = VALUES(due_date),
+  paid_at = VALUES(paid_at),
+  status_id = VALUES(status_id);
