@@ -111,7 +111,7 @@ class DashboardController {
         $start = new DateTimeImmutable('first day of this month');
         $end = new DateTimeImmutable('last day of this month');
 
-        $st = $this->pdo->prepare("
+        $sql = "
             SELECT
               SUM(CASE WHEN (COALESCE(p.transaction_type,'receita') = 'receita') AND LOWER(s.name) IN ('recebido','paid') AND p.paid_at IS NOT NULL AND p.paid_at BETWEEN :ini AND :fim AND (p.currency = 'BRL' OR p.currency IS NULL)
                        THEN p.amount ELSE 0 END) AS receita_mes,
@@ -119,7 +119,8 @@ class DashboardController {
                        THEN p.amount ELSE 0 END) AS despesa_mes
             FROM payments p
             LEFT JOIN status_catalog s ON s.id = p.status_id
-        ");
+        ";
+        $st = $this->pdo->prepare($sql);
 
         $st->bindValue(':ini', $start->format('Y-m-d'));
         $st->bindValue(':fim', $end->format('Y-m-d'));
