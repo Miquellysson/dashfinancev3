@@ -68,12 +68,13 @@ class DashboardController {
     }
 
     private function paidSumBetween(string $from, string $to): float {
-        $st = $this->pdo->prepare("
+        $sql = "
             SELECT COALESCE(SUM(amount),0)
             FROM payments
-            WHERE paid_at BETWEEN :a AND :b
-        ");
-        $st->execute([':a'=>$from, ':b'=>$to]);
+            WHERE paid_at BETWEEN ? AND ?
+        ";
+        $st = $this->pdo->prepare($sql);
+        $st->execute([$from, $to]);
         return (float)$st->fetchColumn();
     }
 
@@ -113,18 +114,16 @@ class DashboardController {
 
         $sql = "
             SELECT
-              SUM(CASE WHEN (COALESCE(p.transaction_type,'receita') = 'receita') AND LOWER(s.name) IN ('recebido','paid') AND p.paid_at IS NOT NULL AND p.paid_at BETWEEN :ini AND :fim AND (p.currency = 'BRL' OR p.currency IS NULL)
+              SUM(CASE WHEN (COALESCE(p.transaction_type,'receita') = 'receita') AND LOWER(s.name) IN ('recebido','paid') AND p.paid_at IS NOT NULL AND p.paid_at BETWEEN ? AND ? AND (p.currency = 'BRL' OR p.currency IS NULL)
                        THEN p.amount ELSE 0 END) AS receita_mes,
-              SUM(CASE WHEN COALESCE(p.transaction_type,'receita') = 'despesa' AND LOWER(s.name) IN ('pago','paid') AND p.paid_at IS NOT NULL AND p.paid_at BETWEEN :ini AND :fim AND (p.currency = 'BRL' OR p.currency IS NULL)
+              SUM(CASE WHEN COALESCE(p.transaction_type,'receita') = 'despesa' AND LOWER(s.name) IN ('pago','paid') AND p.paid_at IS NOT NULL AND p.paid_at BETWEEN ? AND ? AND (p.currency = 'BRL' OR p.currency IS NULL)
                        THEN p.amount ELSE 0 END) AS despesa_mes
             FROM payments p
             LEFT JOIN status_catalog s ON s.id = p.status_id
         ";
         $st = $this->pdo->prepare($sql);
-
-        $st->bindValue(':ini', $start->format('Y-m-d'));
-        $st->bindValue(':fim', $end->format('Y-m-d'));
-        $st->execute();
+        $bounds = [$start->format('Y-m-d'), $end->format('Y-m-d')];
+        $st->execute([...$bounds, ...$bounds]);
 
         $row = $st->fetch(PDO::FETCH_ASSOC) ?: [];
 
@@ -136,8 +135,8 @@ class DashboardController {
 
     private function goalTarget(string $period): float {
         // tenta pegar a meta mais recente para o tipo
-        $st = $this->pdo->prepare("SELECT target_value FROM goals WHERE period_type = :p ORDER BY id DESC LIMIT 1");
-        $st->execute([':p'=>$period]);
+        $st = $this->pdo->prepare("SELECT target_value FROM goals WHERE period_type = ? ORDER BY id DESC LIMIT 1");
+        $st->execute([$period]);
         return (float)($st->fetchColumn() ?: 0);
     }
 
@@ -168,13 +167,13 @@ class DashboardController {
             SELECT DATE_FORMAT(paid_at, '%Y-%m') AS ym, COALESCE(SUM(amount),0) AS total
             FROM payments
             WHERE paid_at IS NOT NULL
-              AND paid_at >= :dini
-              AND paid_at <= LAST_DAY(:dend)
+              AND paid_at >= ?
+              AND paid_at <= LAST_DAY(?)
               AND (currency = 'BRL' OR currency IS NULL)
             GROUP BY ym
             ORDER BY ym
         ");
-        $st->execute([':dini'=>$start->format('Y-m-01'), ':dend'=>$end->format('Y-m-01')]);
+        $st->execute([$start->format('Y-m-01'), $end->format('Y-m-01')]);
         while ($r = $st->fetch(PDO::FETCH_ASSOC)) {
             if (isset($map[$r['ym']])) $series[$map[$r['ym']]] = (float)$r['total'];
         }
