@@ -15,6 +15,35 @@
   <link href="/assets/css/custom.css" rel="stylesheet" />
 </head>
 <body id="page-top">
+<?php
+$rawPath = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH);
+$currentPath = trim($rawPath, '/');
+$transactionTypeParam = strtolower($_GET['transaction_type'] ?? '');
+
+$matchesPath = static function (string $needle) use ($currentPath): bool {
+    if ($needle === '') {
+        return $currentPath === '';
+    }
+    return strpos($currentPath, $needle) === 0;
+};
+
+$navActive = static function (array $patterns) use ($matchesPath): bool {
+    foreach ($patterns as $pattern) {
+        if ($matchesPath($pattern)) {
+            return true;
+        }
+    }
+    return false;
+};
+
+$financeiroPatterns = ['financeiro', 'pagamento', 'dashboard', 'cobranca'];
+$financeiroActive = $navActive($financeiroPatterns);
+
+$contasPagarActive = $matchesPath('pagamento') && $transactionTypeParam === 'despesa';
+$contasReceberActive = $matchesPath('pagamento') && $transactionTypeParam === 'receita';
+$pagamentosActive = $matchesPath('pagamento') && $transactionTypeParam === '';
+$cobrancaActive = $matchesPath('cobranca');
+?>
 <div id="wrapper">
   <!-- Sidebar -->
   <ul class="navbar-nav bg-gradient-primary sidebar sidebar-dark accordion" id="accordionSidebar">
@@ -23,12 +52,29 @@
       <div class="sidebar-brand-text mx-3">Arka Finance</div>
     </a>
     <hr class="sidebar-divider my-0">
-    <li class="nav-item"><a class="nav-link" href="/dashboard"><i class="fas fa-fw fa-tachometer-alt"></i><span>Dashboard</span></a></li>
-       <li class="nav-item"><a class="nav-link" href="/goals"><i class="fas fa-fw fa-tachometer-alt"></i><span>Metas</span></a></li>
-    <li class="nav-item"><a class="nav-link" href="/cliente"><i class="fas fa-users"></i><span>Clientes</span></a></li>
-    <li class="nav-item"><a class="nav-link" href="/projeto"><i class="fas fa-project-diagram"></i><span>Projetos</span></a></li>
-    <li class="nav-item"><a class="nav-link" href="/pagamento"><i class="fas fa-cash-register"></i><span>Pagamentos</span></a></li>
-    <li class="nav-item"><a class="nav-link" href="/cobranca"><i class="fas fa-hand-holding-usd"></i><span>Cobranças</span></a></li>
+    <li class="nav-item<?= $navActive(['dashboard']) ? ' active' : '' ?>"><a class="nav-link" href="/dashboard"><i class="fas fa-fw fa-tachometer-alt"></i><span>Dashboard</span></a></li>
+    <li class="nav-item<?= $navActive(['goals']) ? ' active' : '' ?>"><a class="nav-link" href="/goals"><i class="fas fa-bullseye"></i><span>Metas</span></a></li>
+    <li class="nav-item<?= $navActive(['cliente']) ? ' active' : '' ?>"><a class="nav-link" href="/cliente"><i class="fas fa-users"></i><span>Clientes</span></a></li>
+    <li class="nav-item<?= $navActive(['projeto']) ? ' active' : '' ?>"><a class="nav-link" href="/projeto"><i class="fas fa-project-diagram"></i><span>Projetos</span></a></li>
+    <li class="nav-item<?= $financeiroActive ? ' active' : '' ?>">
+      <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#financeiroMenu" aria-expanded="<?= $financeiroActive ? 'true' : 'false' ?>" aria-controls="financeiroMenu">
+        <i class="fas fa-wallet"></i>
+        <span>Financeiro</span>
+      </a>
+      <div id="financeiroMenu" class="collapse<?= $financeiroActive ? ' show' : '' ?>" data-parent="#accordionSidebar">
+        <div class="bg-white py-2 collapse-inner rounded">
+          <a class="collapse-item<?= $navActive(['dashboard']) ? ' active' : '' ?>" href="/dashboard">Dashboard financeiro</a>
+          <a class="collapse-item<?= $navActive(['financeiro/caixa']) ? ' active' : '' ?>" href="/financeiro/caixa">Caixa / Fluxo de Caixa</a>
+          <a class="collapse-item<?= $navActive(['financeiro/reserva']) ? ' active' : '' ?>" href="/financeiro/reserva">Reserva</a>
+          <a class="collapse-item<?= $contasPagarActive ? ' active' : '' ?>" href="/financeiro/contas-pagar">Contas a Pagar</a>
+          <a class="collapse-item<?= $contasReceberActive ? ' active' : '' ?>" href="/financeiro/contas-receber">Contas a Receber</a>
+          <a class="collapse-item<?= $pagamentosActive ? ' active' : '' ?>" href="/pagamento">Pagamentos</a>
+          <a class="collapse-item<?= $cobrancaActive ? ' active' : '' ?>" href="/cobranca">Cobranças</a>
+          <a class="collapse-item<?= $navActive(['financeiro/relatorios']) ? ' active' : '' ?>" href="/financeiro/relatorios">Relatórios</a>
+          <a class="collapse-item<?= $navActive(['financeiro/configuracoes']) ? ' active' : '' ?>" href="/financeiro/configuracoes">Configurações</a>
+        </div>
+      </div>
+    </li>
     <li class="nav-item"><a class="nav-link" href="/templates"><i class="fas fa-th-large"></i><span>Templates</span></a></li>
     <?php if (Auth::isAdmin()): ?>
     <hr class="sidebar-divider">

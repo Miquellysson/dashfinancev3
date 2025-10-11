@@ -219,6 +219,58 @@ body {
     color: var(--color-muted);
 }
 
+.kpi-link {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--color-primary-700);
+    text-decoration: none;
+    transition: color 0.2s ease;
+}
+
+.kpi-link:hover {
+    color: var(--color-primary-500);
+}
+
+.progress-thin {
+    height: 6px;
+    border-radius: 999px;
+}
+
+.progress-lg {
+    height: 12px;
+    border-radius: 999px;
+}
+
+.icon-circle {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #FFFFFF;
+    background: linear-gradient(135deg, var(--color-primary-500), var(--color-primary-700));
+    box-shadow: 0 6px 16px rgba(10, 3, 22, 0.12);
+}
+
+.icon-circle-lg {
+    width: 64px;
+    height: 64px;
+    font-size: 1.75rem;
+}
+
+.bg-gradient-success {
+    background: linear-gradient(135deg, #1cc88a, #0f5132) !important;
+}
+
+.bg-gradient-primary {
+    background: linear-gradient(135deg, var(--color-primary-500), var(--color-primary-700)) !important;
+}
+
+.bg-gradient-info {
+    background: linear-gradient(135deg, #4e73df, #1b4b99) !important;
+}
+
 /* Cartões de gráfico */
 .dashboard-card {
     border-radius: 1.15rem;

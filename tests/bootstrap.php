@@ -65,3 +65,4 @@ require_once __DIR__ . '/../app/Helpers/Utils.php';
 require_once __DIR__ . '/../app/Models/ClientModel.php';
 require_once __DIR__ . '/../app/Models/ProjectModel.php';
 require_once __DIR__ . '/../app/Models/PaymentModel.php';
+require_once __DIR__ . '/../app/Models/FinancialReserveModel.php';

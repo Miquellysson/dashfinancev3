@@ -2,6 +2,7 @@
 require_once __DIR__ . '/../Models/ClientModel.php';
 require_once __DIR__ . '/../Models/ProjectModel.php';
 require_once __DIR__ . '/../Models/PaymentModel.php';
+require_once __DIR__ . '/../Models/FinancialReserveModel.php';
 
 class DashboardController {
     private $pdo;
@@ -183,14 +184,22 @@ class DashboardController {
     public function index() {
         $this->seedStatusesIfMissing();
 
-        $clientModel  = new ClientModel($this->pdo);
-        $projectModel = new ProjectModel($this->pdo);
-        $paymentModel = new PaymentModel($this->pdo);
+        $clientModel   = new ClientModel($this->pdo);
+        $projectModel  = new ProjectModel($this->pdo);
+        $paymentModel  = new PaymentModel($this->pdo);
+        $reserveModel  = new FinancialReserveModel($this->pdo);
 
         $summary = $this->paymentsSummary();
         $monthly = $this->monthlyCash();
         $caixaGeral = $summary['receita_recebida'] - $summary['despesa_paga'];
         $caixaMensal = $monthly['receita_mes'] - $monthly['despesa_mes'];
+
+        $reserveBalance = $reserveModel->getBalance();
+        $reserveTotals = $reserveModel->getTotals();
+        $reserveUsage = 0;
+        if ($reserveTotals['deposits'] > 0) {
+            $reserveUsage = min(100, max(0, (int)round(($reserveTotals['withdrawals'] / $reserveTotals['deposits']) * 100)));
+        }
 
         $kpiCards = [
             [
@@ -246,6 +255,18 @@ class DashboardController {
                 'raw'    => $caixaMensal,
                 'value'  => Utils::formatMoney($caixaMensal),
                 'type'   => 'money',
+            ],
+            [
+                'label'  => 'Reserva',
+                'helper' => 'Saldo do caixa reserva',
+                'icon'   => 'piggy-bank',
+                'accent' => 'info',
+                'raw'    => $reserveBalance,
+                'value'  => Utils::formatMoney($reserveBalance),
+                'type'   => 'money',
+                'link'   => '/financeiro/reserva',
+                'usage'  => $reserveUsage,
+                'totals' => $reserveTotals,
             ],
         ];
 

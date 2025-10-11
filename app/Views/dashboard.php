@@ -122,6 +122,22 @@ foreach ($metaStructure as $metaInfo) {
             <?= htmlspecialchars($card['value'], ENT_QUOTES, 'UTF-8') ?>
           </div>
           <div class="kpi-helper"><?= htmlspecialchars($card['helper'], ENT_QUOTES, 'UTF-8') ?></div>
+          <?php if (isset($card['usage'])): ?>
+            <div class="kpi-usage mt-3">
+              <div class="d-flex justify-content-between small text-muted mb-1">
+                <span>Utilização</span>
+                <span><?= (int)$card['usage'] ?>%</span>
+              </div>
+              <div class="progress progress-thin">
+                <div class="progress-bar bg-success" role="progressbar" style="width: <?= (int)$card['usage'] ?>%"></div>
+              </div>
+            </div>
+          <?php endif; ?>
+          <?php if (!empty($card['link'])): ?>
+            <a href="<?= htmlspecialchars($card['link'], ENT_QUOTES, 'UTF-8') ?>" class="kpi-link mt-3 d-inline-flex align-items-center">
+              Gerenciar <i class="fas fa-arrow-right ml-2"></i>
+            </a>
+          <?php endif; ?>
         </div>
       </div>
     </div>
