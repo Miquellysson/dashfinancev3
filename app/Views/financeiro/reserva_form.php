@@ -4,8 +4,8 @@ $title = $isEdit ? 'Editar movimentação da reserva' : 'Nova movimentação da 
 ob_start();
 
 $action = $isEdit
-    ? '/financeiro/reserva/atualizar/' . $movement['id']
-    : '/financeiro/reserva/salvar';
+    ? '/financeiro/reserva-atualizar/' . $movement['id']
+    : '/financeiro/reserva-salvar';
 
 $operation = $movement['operation_type'] ?? 'deposit';
 ?>

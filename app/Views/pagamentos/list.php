@@ -4,6 +4,12 @@ use function htmlspecialchars as h;
 $title = 'Pagamentos';
 ob_start();
 
+$filters = $filters ?? [];
+$typeFilter = $filters['transaction_type'] ?? '';
+$categoryFilter = $filters['category'] ?? '';
+$searchFilter = $filters['search'] ?? '';
+$exportUrl = '/pagamento/export' . ($filters ? '?' . http_build_query($filters) : '');
+
 $typeLabels = [
   'receita' => ['label' => 'Receita', 'badge' => 'badge-soft-success', 'row' => 'transaction-row-receita'],
   'despesa' => ['label' => 'Despesa', 'badge' => 'badge-soft-danger', 'row' => 'transaction-row-despesa'],
@@ -32,13 +38,52 @@ $normalizeStatus = static function (?string $status) use ($statusAliases) {
 <div class="d-flex justify-content-between align-items-center mb-3">
   <h1 class="h4 mb-0">Pagamentos</h1>
   <div>
-    <a class="btn btn-sm btn-secondary" href="/pagamento/export">Exportar CSV</a>
+    <a class="btn btn-sm btn-secondary" href="<?= h($exportUrl) ?>">Exportar CSV</a>
     <a class="btn btn-sm btn-primary" href="/pagamento/create">Novo pagamento</a>
   </div>
 </div>
 
+<?php if ($typeFilter || $categoryFilter || $searchFilter): ?>
+  <div class="alert alert-info py-2 px-3 mb-3 small">
+    <strong>Filtros ativos:</strong>
+    <?php if ($typeFilter): ?>
+      <span class="ml-1">Tipo <?= $typeFilter === 'despesa' ? 'Despesas' : 'Receitas' ?>;</span>
+    <?php endif; ?>
+    <?php if ($categoryFilter): ?>
+      <span class="ml-1">Categoria "<?= h($categoryFilter) ?>";</span>
+    <?php endif; ?>
+    <?php if ($searchFilter): ?>
+      <span class="ml-1">Busca por "<?= h($searchFilter) ?>".</span>
+    <?php endif; ?>
+  </div>
+<?php endif; ?>
+
 <div class="card">
-  <div class="card-body table-responsive">
+  <div class="card-body">
+    <form method="get" class="form-row align-items-end mb-4">
+      <div class="form-group col-md-3 col-sm-6">
+        <label class="small text-uppercase text-muted">Tipo</label>
+        <select name="transaction_type" class="form-control">
+          <option value="">Todos</option>
+          <option value="receita" <?= $typeFilter === 'receita' ? 'selected' : '' ?>>Receitas</option>
+          <option value="despesa" <?= $typeFilter === 'despesa' ? 'selected' : '' ?>>Despesas</option>
+        </select>
+      </div>
+      <div class="form-group col-md-3 col-sm-6">
+        <label class="small text-uppercase text-muted">Categoria</label>
+        <input type="text" name="category" class="form-control" value="<?= h($categoryFilter) ?>" placeholder="Ex.: Serviços">
+      </div>
+      <div class="form-group col-md-4">
+        <label class="small text-uppercase text-muted">Buscar</label>
+        <input type="text" name="search" class="form-control" value="<?= h($searchFilter) ?>" placeholder="Descrição, projeto ou cliente">
+      </div>
+      <div class="form-group col-md-2 col-sm-12 text-sm-left text-md-right">
+        <a href="/pagamento" class="btn btn-link">Limpar</a>
+        <button type="submit" class="btn btn-primary">Filtrar</button>
+      </div>
+    </form>
+
+    <div class="table-responsive">
     <table class="table table-bordered table-striped">
       <thead>
         <tr>
@@ -98,6 +143,7 @@ $normalizeStatus = static function (?string $status) use ($statusAliases) {
         <?php endif; ?>
       </tbody>
     </table>
+    </div>
   </div>
 </div>
 

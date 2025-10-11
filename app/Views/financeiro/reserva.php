@@ -29,7 +29,7 @@ $currentPage = $pagination['current'] ?? 1;
     <p class="text-muted mb-0">Controle os aportes e retiradas do caixa reserva.</p>
   </div>
   <div class="d-flex flex-wrap align-items-center justify-content-end">
-    <a href="/financeiro/reserva/criar" class="btn btn-primary mr-2 mb-2">
+    <a href="/financeiro/reserva-criar" class="btn btn-primary mr-2 mb-2">
       <i class="fas fa-plus-circle mr-2"></i>Nova movimentação
     </a>
     <a href="<?= htmlspecialchars($exportUrl, ENT_QUOTES, 'UTF-8') ?>" class="btn btn-outline-secondary mb-2">
@@ -165,10 +165,10 @@ $currentPage = $pagination['current'] ?? 1;
             <td><?= $entry['description'] ? htmlspecialchars($entry['description'], ENT_QUOTES, 'UTF-8') : '—' ?></td>
             <td><?= $entry['notes'] ? nl2br(htmlspecialchars($entry['notes'], ENT_QUOTES, 'UTF-8')) : '—' ?></td>
             <td class="text-right">
-              <a href="/financeiro/reserva/editar/<?= $entry['id'] ?>" class="btn btn-sm btn-outline-primary">
+              <a href="/financeiro/reserva-editar/<?= $entry['id'] ?>" class="btn btn-sm btn-outline-primary">
                 <i class="fas fa-edit"></i>
               </a>
-              <form action="/financeiro/reserva/excluir/<?= $entry['id'] ?>" method="post" class="d-inline" onsubmit="return confirm('Confirma remover esta movimentação?');">
+              <form action="/financeiro/reserva-excluir/<?= $entry['id'] ?>" method="post" class="d-inline" onsubmit="return confirm('Confirma remover esta movimentação?');">
                 <button type="submit" class="btn btn-sm btn-outline-danger">
                   <i class="fas fa-trash"></i>
                 </button>

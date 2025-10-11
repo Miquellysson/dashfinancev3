@@ -132,13 +132,33 @@ class PaymentModel {
        Consultas
        ----------------------- */
 
-    public function getAll($limit = null, $offset = 0) {
+    public function getAll($limit = null, $offset = 0, array $filters = []) {
         $limitSql = '';
         if ($limit !== null) {
             $limit  = (int)$limit;
             $offset = (int)$offset;
             $limitSql = " LIMIT :lim OFFSET :off";
         }
+
+        $conditions = [];
+        $params = [];
+
+        if (!empty($filters['transaction_type']) && in_array($filters['transaction_type'], ['receita', 'despesa'], true)) {
+            $conditions[] = "COALESCE(p.transaction_type, 'receita') = :transaction_type";
+            $params[':transaction_type'] = $filters['transaction_type'];
+        }
+
+        if (!empty($filters['category'])) {
+            $conditions[] = 'p.category LIKE :category';
+            $params[':category'] = '%' . $filters['category'] . '%';
+        }
+
+        if (!empty($filters['search'])) {
+            $conditions[] = '(p.description LIKE :search OR p.category LIKE :search OR pr.name LIKE :search OR c.name LIKE :search)';
+            $params[':search'] = '%' . $filters['search'] . '%';
+        }
+
+        $whereSql = $conditions ? 'WHERE ' . implode(' AND ', $conditions) : '';
 
         $sql = "
             SELECT p.*,
@@ -149,11 +169,15 @@ class PaymentModel {
             LEFT JOIN projects pr       ON p.project_id = pr.id
             LEFT JOIN clients  c        ON pr.client_id = c.id
             LEFT JOIN status_catalog s  ON s.id = p.status_id
+            {$whereSql}
             ORDER BY COALESCE(p.paid_at, p.due_date) DESC, p.id DESC
             {$limitSql}
         ";
 
         $st = $this->pdo->prepare($sql);
+        foreach ($params as $key => $value) {
+            $st->bindValue($key, $value, PDO::PARAM_STR);
+        }
         if ($limitSql) {
             $st->bindValue(':lim', $limit, PDO::PARAM_INT);
             $st->bindValue(':off', $offset, PDO::PARAM_INT);

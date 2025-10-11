@@ -105,7 +105,7 @@ class FinanceiroController {
 
         $query = $_GET;
         unset($query['page']);
-        $exportUrl = '/financeiro/reserva/exportar' . ($query ? '?' . http_build_query($query) : '');
+        $exportUrl = '/financeiro/reserva-exportar' . ($query ? '?' . http_build_query($query) : '');
 
         include __DIR__ . '/../Views/financeiro/reserva.php';
     }
@@ -125,8 +125,12 @@ class FinanceiroController {
     public function reservaSalvar() {
         $payload = $this->sanitizeReserveInput($_POST);
         $payload['created_by'] = $_SESSION['user_id'] ?? null;
-        $this->reserve->create($payload);
-        Utils::redirect('/financeiro/reserva', 'Movimentação registrada com sucesso.');
+        try {
+            $this->reserve->create($payload);
+            Utils::redirect('/financeiro/reserva', 'Movimentação registrada com sucesso.');
+        } catch (PDOException $e) {
+            $this->handleReserveException($e);
+        }
     }
 
     public function reservaEditar($id) {
@@ -143,8 +147,12 @@ class FinanceiroController {
             Utils::redirect('/financeiro/reserva', 'Movimentação não encontrada.');
         }
         $payload = $this->sanitizeReserveInput($_POST);
-        $this->reserve->update((int)$id, $payload);
-        Utils::redirect('/financeiro/reserva', 'Movimentação atualizada com sucesso.');
+        try {
+            $this->reserve->update((int)$id, $payload);
+            Utils::redirect('/financeiro/reserva', 'Movimentação atualizada com sucesso.');
+        } catch (PDOException $e) {
+            $this->handleReserveException($e);
+        }
     }
 
     public function reservaExcluir($id) {
@@ -152,8 +160,12 @@ class FinanceiroController {
         if (!$movement) {
             Utils::redirect('/financeiro/reserva', 'Movimentação não encontrada.');
         }
-        $this->reserve->delete((int)$id);
-        Utils::redirect('/financeiro/reserva', 'Movimentação removida.');
+        try {
+            $this->reserve->delete((int)$id);
+            Utils::redirect('/financeiro/reserva', 'Movimentação removida.');
+        } catch (PDOException $e) {
+            $this->handleReserveException($e);
+        }
     }
 
     public function reservaExportar() {
@@ -235,5 +247,15 @@ class FinanceiroController {
             'category' => $category !== '' ? Utils::sanitize($category) : null,
             'notes' => $notes !== '' ? Utils::sanitize($notes) : null,
         ];
+    }
+
+    private function handleReserveException(PDOException $e): void {
+        if (in_array($e->getCode(), ['42S02', '42S22'], true)) {
+            Utils::redirect(
+                '/financeiro/reserva',
+                'Estrutura da reserva financeira não está disponível. Execute a migração 20241019_financial_reserve.sql antes de continuar.'
+            );
+        }
+        throw $e;
     }
 }

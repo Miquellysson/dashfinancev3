@@ -18,7 +18,7 @@ ob_start();
       <a href="/pagamento/export" class="btn btn-outline-primary mr-2 mb-2">
         <i class="fas fa-file-download mr-2"></i>Pagamentos completos
       </a>
-      <a href="/financeiro/reserva/exportar" class="btn btn-outline-secondary mb-2">
+      <a href="/financeiro/reserva-exportar" class="btn btn-outline-secondary mb-2">
         <i class="fas fa-piggy-bank mr-2"></i>Reserva financeira
       </a>
     </div>

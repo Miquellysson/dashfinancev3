@@ -55,7 +55,8 @@ class PagamentoController {
     }
 
     public function index() {
-        $payments = $this->paymentModel->getAll();
+        $filters = $this->parseFilters();
+        $payments = $this->paymentModel->getAll(null, 0, $filters);
         include __DIR__ . '/../Views/pagamentos/list.php';
     }
 
@@ -112,7 +113,8 @@ class PagamentoController {
 
     // /pagamento/export -> CSV
     public function export() {
-        $rows = $this->paymentModel->getAll();
+        $filters = $this->parseFilters($_GET);
+        $rows = $this->paymentModel->getAll(null, 0, $filters);
         header('Content-Type: text/csv; charset=utf-8');
         header('Content-Disposition: attachment; filename=payments_export.csv');
         $out = fopen('php://output', 'w');
@@ -158,5 +160,27 @@ class PagamentoController {
         }
         fclose($out);
         exit;
+    }
+
+    private function parseFilters(?array $source = null): array {
+        $input = $source ?? $_GET;
+        $filters = [];
+
+        if (!empty($input['transaction_type'])) {
+            $type = strtolower(trim((string)$input['transaction_type']));
+            if (in_array($type, ['receita', 'despesa'], true)) {
+                $filters['transaction_type'] = $type;
+            }
+        }
+
+        if (!empty($input['category'])) {
+            $filters['category'] = trim((string)$input['category']);
+        }
+
+        if (!empty($input['search'])) {
+            $filters['search'] = trim((string)$input['search']);
+        }
+
+        return $filters;
     }
 }
