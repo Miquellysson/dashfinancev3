@@ -121,10 +121,9 @@ class DashboardController {
             LEFT JOIN status_catalog s ON s.id = p.status_id
         ");
 
-        $st->execute([
-            ':ini' => $start->format('Y-m-d'),
-            ':fim' => $end->format('Y-m-d'),
-        ]);
+        $st->bindValue(':ini', $start->format('Y-m-d'));
+        $st->bindValue(':fim', $end->format('Y-m-d'));
+        $st->execute();
 
         $row = $st->fetch(PDO::FETCH_ASSOC) ?: [];
 
