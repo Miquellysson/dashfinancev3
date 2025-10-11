@@ -1,8 +1,8 @@
 
 <?php
 $host = 'localhost';
-$db   = 'u100060033_financav3';
-$user = 'u100060033_financav3';
+$db   = 'u100060033_financa_v3';
+$user = 'u100060033_financa_v3';
 $pass = 'Arkaleads2025!@#';
 $charset = 'utf8mb4';
 $dsn = "mysql:host=$host;dbname=$db;charset=$charset";
