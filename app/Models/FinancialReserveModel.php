@@ -8,94 +8,106 @@ class FinancialReserveModel {
     }
 
     public function getBalance(): float {
-        $stmt = $this->pdo->query("
-            SELECT COALESCE(SUM(CASE WHEN operation_type = 'deposit' THEN amount ELSE -amount END), 0)
-            FROM financial_reserve_entries
-            WHERE deleted_at IS NULL
-        ");
-        return (float)$stmt->fetchColumn();
+        return $this->guard(function () {
+            $stmt = $this->pdo->query("
+                SELECT COALESCE(SUM(CASE WHEN operation_type = 'deposit' THEN amount ELSE -amount END), 0)
+                FROM financial_reserve_entries
+                WHERE deleted_at IS NULL
+            ");
+            return (float)$stmt->fetchColumn();
+        }, 0.0);
     }
 
     public function getTotals(array $filters = []): array {
         [$where, $params] = $this->buildFilters($filters);
-        $sql = "
-            SELECT
-                COALESCE(SUM(CASE WHEN operation_type = 'deposit' THEN amount END), 0) AS deposits,
-                COALESCE(SUM(CASE WHEN operation_type = 'withdraw' THEN amount END), 0) AS withdrawals
-            FROM financial_reserve_entries
-            {$where}
-        ";
-        $stmt = $this->pdo->prepare($sql);
-        foreach ($params as $key => $value) {
-            $stmt->bindValue($key, $value);
-        }
-        $stmt->execute();
-        $row = $stmt->fetch(PDO::FETCH_ASSOC) ?: ['deposits' => 0, 'withdrawals' => 0];
-        return [
-            'deposits' => (float)$row['deposits'],
-            'withdrawals' => (float)$row['withdrawals'],
-        ];
+        return $this->guard(function () use ($where, $params) {
+            $sql = "
+                SELECT
+                    COALESCE(SUM(CASE WHEN operation_type = 'deposit' THEN amount END), 0) AS deposits,
+                    COALESCE(SUM(CASE WHEN operation_type = 'withdraw' THEN amount END), 0) AS withdrawals
+                FROM financial_reserve_entries
+                {$where}
+            ";
+            $stmt = $this->pdo->prepare($sql);
+            foreach ($params as $key => $value) {
+                $stmt->bindValue($key, $value);
+            }
+            $stmt->execute();
+            $row = $stmt->fetch(PDO::FETCH_ASSOC) ?: ['deposits' => 0, 'withdrawals' => 0];
+            return [
+                'deposits' => (float)$row['deposits'],
+                'withdrawals' => (float)$row['withdrawals'],
+            ];
+        }, ['deposits' => 0.0, 'withdrawals' => 0.0]);
     }
 
     public function paginate(array $filters, int $limit, int $offset): array {
         [$where, $params] = $this->buildFilters($filters);
-        $sql = "
-            SELECT id, operation_type, amount, reference_date, description, category, notes, created_by, created_at, updated_at
-            FROM financial_reserve_entries
-            {$where}
-            ORDER BY reference_date DESC, id DESC
-            LIMIT :limit OFFSET :offset
-        ";
-        $stmt = $this->pdo->prepare($sql);
-        foreach ($params as $key => $value) {
-            $stmt->bindValue($key, $value);
-        }
-        $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
-        $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
-        $stmt->execute();
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        return $this->guard(function () use ($where, $params, $limit, $offset) {
+            $sql = "
+                SELECT id, operation_type, amount, reference_date, description, category, notes, created_by, created_at, updated_at
+                FROM financial_reserve_entries
+                {$where}
+                ORDER BY reference_date DESC, id DESC
+                LIMIT :limit OFFSET :offset
+            ";
+            $stmt = $this->pdo->prepare($sql);
+            foreach ($params as $key => $value) {
+                $stmt->bindValue($key, $value);
+            }
+            $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+            $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
+            $stmt->execute();
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        }, []);
     }
 
     public function count(array $filters): int {
         [$where, $params] = $this->buildFilters($filters);
-        $stmt = $this->pdo->prepare("
-            SELECT COUNT(*)
-            FROM financial_reserve_entries
-            {$where}
-        ");
-        foreach ($params as $key => $value) {
-            $stmt->bindValue($key, $value);
-        }
-        $stmt->execute();
-        return (int)$stmt->fetchColumn();
+        return $this->guard(function () use ($where, $params) {
+            $stmt = $this->pdo->prepare("
+                SELECT COUNT(*)
+                FROM financial_reserve_entries
+                {$where}
+            ");
+            foreach ($params as $key => $value) {
+                $stmt->bindValue($key, $value);
+            }
+            $stmt->execute();
+            return (int)$stmt->fetchColumn();
+        }, 0);
     }
 
     public function export(array $filters): array {
         [$where, $params] = $this->buildFilters($filters);
-        $sql = "
-            SELECT id, operation_type, amount, reference_date, description, category, notes, created_by, created_at, updated_at
-            FROM financial_reserve_entries
-            {$where}
-            ORDER BY reference_date DESC, id DESC
-        ";
-        $stmt = $this->pdo->prepare($sql);
-        foreach ($params as $key => $value) {
-            $stmt->bindValue($key, $value);
-        }
-        $stmt->execute();
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        return $this->guard(function () use ($where, $params) {
+            $sql = "
+                SELECT id, operation_type, amount, reference_date, description, category, notes, created_by, created_at, updated_at
+                FROM financial_reserve_entries
+                {$where}
+                ORDER BY reference_date DESC, id DESC
+            ";
+            $stmt = $this->pdo->prepare($sql);
+            foreach ($params as $key => $value) {
+                $stmt->bindValue($key, $value);
+            }
+            $stmt->execute();
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        }, []);
     }
 
     public function find(int $id): ?array {
-        $stmt = $this->pdo->prepare("
-            SELECT id, operation_type, amount, reference_date, description, category, notes, created_by, created_at, updated_at
-            FROM financial_reserve_entries
-            WHERE id = :id AND deleted_at IS NULL
-            LIMIT 1
-        ");
-        $stmt->execute([':id' => $id]);
-        $row = $stmt->fetch(PDO::FETCH_ASSOC);
-        return $row ?: null;
+        return $this->guard(function () use ($id) {
+            $stmt = $this->pdo->prepare("
+                SELECT id, operation_type, amount, reference_date, description, category, notes, created_by, created_at, updated_at
+                FROM financial_reserve_entries
+                WHERE id = :id AND deleted_at IS NULL
+                LIMIT 1
+            ");
+            $stmt->execute([':id' => $id]);
+            $row = $stmt->fetch(PDO::FETCH_ASSOC);
+            return $row ?: null;
+        }, null);
     }
 
     public function create(array $data): int {
@@ -176,5 +188,15 @@ class FinancialReserveModel {
         $sqlWhere = 'WHERE ' . implode(' AND ', $where);
         return [$sqlWhere, $params];
     }
-}
 
+    private function guard(callable $callback, $default) {
+        try {
+            return $callback();
+        } catch (PDOException $e) {
+            if (in_array($e->getCode(), ['42S02', '42S22'], true)) {
+                return $default;
+            }
+            throw $e;
+        }
+    }
+}
