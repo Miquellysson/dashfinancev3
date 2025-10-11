@@ -166,6 +166,7 @@ class PaymentModel {
         $st = $this->pdo->prepare("
             SELECT p.*,
                    pr.name AS project_name,
+                   pr.client_id AS project_client_id,
                    s.name  AS status_name
             FROM payments p
             LEFT JOIN projects pr      ON p.project_id = pr.id

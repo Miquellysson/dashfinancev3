@@ -86,6 +86,8 @@ $(document).ready(function() {
     $('#sidebarToggleTop').on('click', function() {
         $('#accordionSidebar').toggleClass('toggled');
     });
+
+    initNotifications();
 });
 
 // Função para formatar moeda
@@ -98,8 +100,17 @@ function formatCurrency(value) {
 
 // Função para formatar data
 function formatDate(dateString) {
-    const date = new Date(dateString);
+    if (!dateString) return '';
+    const date = new Date(dateString.replace(' ', 'T'));
+    if (Number.isNaN(date.getTime())) return '';
     return date.toLocaleDateString('pt-BR');
+}
+
+function formatDateTime(dateString) {
+    if (!dateString) return '';
+    const date = new Date(dateString.replace(' ', 'T'));
+    if (Number.isNaN(date.getTime())) return '';
+    return date.toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
 }
 
 // Função para exportar tabela para CSV
@@ -129,4 +140,85 @@ function downloadCSV(csv, filename) {
     document.body.appendChild(downloadLink);
     downloadLink.click();
     document.body.removeChild(downloadLink);
+}
+
+function initNotifications() {
+    const bell = document.querySelector('#notificationsBell');
+    if (!bell) return;
+
+    const badge = bell.querySelector('.notification-count');
+    const list = document.querySelector('#notificationsList');
+    const soundEl = document.querySelector('#notificationSound');
+    let knownIds = new Set();
+
+    const fetchFeed = () => {
+        fetch('/notifications/feed')
+            .then((res) => res.json())
+            .then((data) => {
+                const items = data.items || [];
+                renderNotifications(items);
+                playIfNew(items);
+            })
+            .catch(() => {});
+    };
+
+    const renderNotifications = (items) => {
+        if (!list) return;
+        list.innerHTML = '';
+        if (!items.length) {
+            list.innerHTML = '<li class="dropdown-item text-muted small">Sem notificações</li>';
+            badge.textContent = '';
+            badge.classList.add('d-none');
+            return;
+        }
+        badge.textContent = items.length;
+        badge.classList.remove('d-none');
+
+        items.forEach((item) => {
+            const li = document.createElement('li');
+            li.className = 'dropdown-item notification-item';
+            li.dataset.id = item.id;
+            li.innerHTML = `
+                <div class="notification-title">${escapeHtml(item.title)}</div>
+                <div class="notification-message small text-muted">${escapeHtml(item.message || '')}</div>
+                <div class="notification-time small text-muted">${formatDateTime(item.trigger_at)}</div>
+            `;
+            list.appendChild(li);
+        });
+    };
+
+    const playIfNew = (items) => {
+        const newIds = items.filter((item) => !knownIds.has(item.id)).map((item) => item.id);
+        if (newIds.length && soundEl) {
+            soundEl.currentTime = 0;
+            soundEl.play().catch(() => {});
+        }
+        knownIds = new Set(items.map((item) => item.id));
+    };
+
+    const markAllRead = () => {
+        const ids = Array.from(knownIds);
+        if (!ids.length) return;
+        fetch('/notifications/mark-read', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ids }),
+        }).then(() => {
+            knownIds.clear();
+            fetchFeed();
+        }).catch(() => {});
+    };
+
+    bell.addEventListener('show.bs.dropdown', () => {
+        markAllRead();
+    });
+
+    fetchFeed();
+    setInterval(fetchFeed, 60000);
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.innerText = text || '';
+    return div.innerHTML;
 }

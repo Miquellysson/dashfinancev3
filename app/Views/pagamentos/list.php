@@ -84,9 +84,12 @@ $normalizeStatus = static function (?string $status) use ($statusAliases) {
           <td><?= $category !== '' ? h($category) : '—' ?></td>
           <td><?= h($amountFormatted) ?></td>
           <td><span class="status-pill badge-soft-secondary"><?= h($statusLabel) ?></span></td>
-          <td>
+          <td class="btn-group">
             <a class="btn btn-sm btn-outline-primary" href="/pagamento/edit/<?= (int)$p['id'] ?>">Editar</a>
             <a class="btn btn-sm btn-outline-danger" href="/pagamento/delete/<?= (int)$p['id'] ?>" onclick="return confirm('Excluir pagamento?');">Excluir</a>
+            <a class="btn btn-sm btn-outline-success" href="/cobranca/criar?payment_id=<?= (int)$p['id'] ?>">
+              <i class="fas fa-hand-holding-usd mr-1"></i>Cobrar
+            </a>
           </td>
         </tr>
         <?php endforeach; ?>

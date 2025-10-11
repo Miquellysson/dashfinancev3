@@ -28,6 +28,7 @@
     <li class="nav-item"><a class="nav-link" href="/cliente"><i class="fas fa-users"></i><span>Clientes</span></a></li>
     <li class="nav-item"><a class="nav-link" href="/projeto"><i class="fas fa-project-diagram"></i><span>Projetos</span></a></li>
     <li class="nav-item"><a class="nav-link" href="/pagamento"><i class="fas fa-cash-register"></i><span>Pagamentos</span></a></li>
+    <li class="nav-item"><a class="nav-link" href="/cobranca"><i class="fas fa-hand-holding-usd"></i><span>Cobranças</span></a></li>
     <li class="nav-item"><a class="nav-link" href="/templates"><i class="fas fa-th-large"></i><span>Templates</span></a></li>
     <?php if (Auth::isAdmin()): ?>
     <hr class="sidebar-divider">
@@ -43,6 +44,18 @@
       <nav class="navbar navbar-expand navbar-light bg-white topbar mb-4 static-top shadow">
         <button id="sidebarToggleTop" class="btn btn-link d-md-none rounded-circle mr-3"><i class="fa fa-bars"></i></button>
         <ul class="navbar-nav ml-auto">
+          <li class="nav-item dropdown no-arrow">
+            <a class="nav-link dropdown-toggle" href="#" id="notificationsBell" role="button" data-toggle="dropdown">
+              <i class="fas fa-bell"></i>
+              <span class="badge badge-danger badge-counter notification-count d-none"></span>
+            </a>
+            <div class="dropdown-menu dropdown-menu-right shadow animated--grow-in">
+              <h6 class="dropdown-header">Notificações</h6>
+              <ul class="list-unstyled mb-0" id="notificationsList">
+                <li class="dropdown-item text-muted small">Carregando...</li>
+              </ul>
+            </div>
+          </li>
           <li class="nav-item dropdown no-arrow">
             <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-toggle="dropdown">
               <span class="mr-2 d-none d-lg-inline text-gray-600 small"><?= htmlspecialchars($_SESSION['user_name'] ?? 'Usuário') ?></span>
@@ -83,5 +96,6 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/startbootstrap-sb-admin-2/4.1.4/js/sb-admin-2.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/apexcharts@3.45.2"></script>
 <script src="/assets/js/app.js"></script>
+<audio id="notificationSound" src="/assets/sounds/notify.mp3" preload="auto"></audio>
 </body>
 </html>
