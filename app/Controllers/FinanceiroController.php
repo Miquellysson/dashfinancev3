@@ -40,7 +40,9 @@ class FinanceiroController {
             FROM payments
             WHERE (currency = 'BRL' OR currency IS NULL)
         ");
-        $stmt->execute([':start' => $monthStart, ':end' => $monthEnd]);
+        $stmt->bindValue(':start', $monthStart);
+        $stmt->bindValue(':end', $monthEnd);
+        $stmt->execute();
         $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         $totals = [
@@ -63,7 +65,8 @@ class FinanceiroController {
             ORDER BY due_date ASC
             LIMIT 8
         ");
-        $upcoming->execute([':today' => $today->format('Y-m-d')]);
+        $upcoming->bindValue(':today', $today->format('Y-m-d'));
+        $upcoming->execute();
         $upcomingPayments = $upcoming->fetchAll(PDO::FETCH_ASSOC);
 
         $reserveBalance = $this->reserve->getBalance();
