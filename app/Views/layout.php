@@ -56,6 +56,12 @@ $cobrancaActive = $matchesPath('cobranca');
     <li class="nav-item<?= $navActive(['goals']) ? ' active' : '' ?>"><a class="nav-link" href="/goals"><i class="fas fa-bullseye"></i><span>Metas</span></a></li>
     <li class="nav-item<?= $navActive(['cliente']) ? ' active' : '' ?>"><a class="nav-link" href="/cliente"><i class="fas fa-users"></i><span>Clientes</span></a></li>
     <li class="nav-item<?= $navActive(['projeto']) ? ' active' : '' ?>"><a class="nav-link" href="/projeto"><i class="fas fa-project-diagram"></i><span>Projetos</span></a></li>
+    <li class="nav-item<?= $cobrancaActive ? ' active' : '' ?>">
+      <a class="nav-link" href="/cobranca">
+        <i class="fas fa-hand-holding-usd"></i>
+        <span>Cobranças <span class="badge badge-warning ml-1">Novo</span></span>
+      </a>
+    </li>
     <li class="nav-item<?= $financeiroActive ? ' active' : '' ?>">
       <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#financeiroMenu" aria-expanded="<?= $financeiroActive ? 'true' : 'false' ?>" aria-controls="financeiroMenu">
         <i class="fas fa-wallet"></i>
@@ -69,7 +75,6 @@ $cobrancaActive = $matchesPath('cobranca');
           <a class="collapse-item<?= $contasPagarActive ? ' active' : '' ?>" href="/financeiro/contas-pagar">Contas a Pagar</a>
           <a class="collapse-item<?= $contasReceberActive ? ' active' : '' ?>" href="/financeiro/contas-receber">Contas a Receber</a>
           <a class="collapse-item<?= $pagamentosActive ? ' active' : '' ?>" href="/pagamento">Pagamentos</a>
-          <a class="collapse-item<?= $cobrancaActive ? ' active' : '' ?>" href="/cobranca">Cobranças</a>
           <a class="collapse-item<?= $navActive(['financeiro/relatorios']) ? ' active' : '' ?>" href="/financeiro/relatorios">Relatórios</a>
           <a class="collapse-item<?= $navActive(['financeiro/configuracoes']) ? ' active' : '' ?>" href="/financeiro/configuracoes">Configurações</a>
         </div>

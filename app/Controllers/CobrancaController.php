@@ -5,6 +5,7 @@ require_once __DIR__ . '/../Models/ClientModel.php';
 require_once __DIR__ . '/../Models/UserModel.php';
 require_once __DIR__ . '/../Models/NotificationModel.php';
 require_once __DIR__ . '/../Models/PaymentModel.php';
+require_once __DIR__ . '/../Models/CollectionBoardModel.php';
 
 class CobrancaController {
     private PDO $pdo;
@@ -14,6 +15,7 @@ class CobrancaController {
     private UserModel $users;
     private NotificationModel $notifications;
     private PaymentModel $payments;
+    private CollectionBoardModel $collectionBoard;
 
     public function __construct(PDO $pdo) {
         $this->pdo = $pdo;
@@ -27,9 +29,43 @@ class CobrancaController {
         $this->users = new UserModel($pdo);
         $this->notifications = new NotificationModel($pdo);
         $this->payments = new PaymentModel($pdo);
+        $this->collectionBoard = new CollectionBoardModel($pdo);
     }
 
     public function index() {
+        if ($this->isLegacyRequested()) {
+            return $this->legacyIndex();
+        }
+        return $this->boardView();
+    }
+
+    private function boardView(): void {
+        $filters = $this->parseBoardFilters($_GET);
+        $board = $this->collectionBoard->fetchBoard($filters);
+
+        $columns = $board['columns'] ?? [];
+        $summary = $board['summary'] ?? ['total_amount' => 0, 'total_cards' => 0, 'due_today' => 0, 'due_today_amount' => 0, 'overdue_amount' => 0];
+        $filterSelections = $board['filters_used'] ?? $filters;
+
+        $responsaveis = $this->users->listActive();
+        $columnMeta = $this->columnMeta();
+        $lostReasons = $this->lostReasonOptions();
+        $templates = $this->messageTemplates();
+        $statusOptions = $this->statusFilterOptions();
+        $orderOptions = $this->orderOptions();
+
+        $title = 'Gestão de Cobranças';
+        ob_start();
+        include __DIR__ . '/../Views/cobranca/kanban.php';
+        $content = ob_get_clean();
+        include __DIR__ . '/../Views/layout.php';
+    }
+
+    private function isLegacyRequested(): bool {
+        return isset($_GET['modo']) && $_GET['modo'] === 'legacy';
+    }
+
+    private function legacyIndex(): void {
         $filters = [
             'status' => $_GET['status'] ?? null,
             'responsavel_id' => $_GET['responsavel_id'] ?? null,
@@ -43,11 +79,173 @@ class CobrancaController {
         $clients = $this->clients->getAll(200, 0);
         $responsaveis = $this->users->listActive();
 
-        $title = 'Cobranças';
+        $title = 'Cobranças (legado)';
         ob_start();
         include __DIR__ . '/../Views/cobranca/index.php';
         $content = ob_get_clean();
         include __DIR__ . '/../Views/layout.php';
+    }
+
+    public function boardData() {
+        $filters = $this->parseBoardFilters($_GET);
+        $board = $this->collectionBoard->fetchBoard($filters);
+        $this->jsonResponse([
+            'columns' => $board['columns'] ?? [],
+            'summary' => $board['summary'] ?? [],
+            'filters' => $board['filters_used'] ?? $filters,
+        ]);
+    }
+
+    public function move() {
+        $this->requirePost();
+        $input = $this->requestData();
+        $paymentId = (int)($input['payment_id'] ?? 0);
+        $targetStatus = $input['to_status'] ?? '';
+
+        if ($paymentId <= 0 || !$targetStatus) {
+            return $this->jsonError('Dados inválidos para movimentação.', 422);
+        }
+
+        $options = [
+            'reason_code' => $input['reason_code'] ?? null,
+            'notes' => $input['notes'] ?? null,
+        ];
+
+        if ($targetStatus === 'perdido') {
+            $options['lost_reason'] = $input['lost_reason'] ?? null;
+            $options['lost_details'] = $input['lost_details'] ?? null;
+            if (empty($options['lost_reason'])) {
+                return $this->jsonError('Selecione um motivo para a perda.', 422);
+            }
+        }
+
+        try {
+            $this->collectionBoard->updateManualStatus($paymentId, $targetStatus, $options, $this->currentUserId());
+            $card = $this->collectionBoard->getCardDetails($paymentId);
+            $contacts = $this->collectionBoard->listContacts($paymentId);
+            $movements = $this->collectionBoard->listMovements($paymentId);
+            $this->jsonResponse([
+                'success' => true,
+                'card' => $card,
+                'contacts' => $contacts,
+                'movements' => $movements,
+            ]);
+        } catch (InvalidArgumentException $e) {
+            $this->jsonError($e->getMessage(), 422);
+        } catch (Throwable $e) {
+            $this->jsonError('Não foi possível mover a cobrança.', 500);
+        }
+    }
+
+    public function registrarContato() {
+        $this->requirePost();
+        $input = $this->requestData();
+        $paymentId = (int)($input['payment_id'] ?? 0);
+        $contactType = $input['contact_type'] ?? '';
+
+        if ($paymentId <= 0 || !$contactType) {
+            return $this->jsonError('Dados do contato inválidos.', 422);
+        }
+
+        $allowedTypes = ['email','whatsapp','sms','ligacao','outro'];
+        if (!in_array($contactType, $allowedTypes, true)) {
+            return $this->jsonError('Tipo de contato inválido.', 422);
+        }
+
+        $payload = [
+            'contact_type' => $contactType,
+            'contacted_at' => $this->normalizeDateTimeInput($input['contacted_at'] ?? null),
+            'client_response' => $input['client_response'] ?? null,
+            'expected_payment_at' => $this->normalizeDateInput($input['expected_payment_at'] ?? null),
+            'notes' => $input['notes'] ?? null,
+            'is_reminder' => 0,
+            'auto_move_to' => 'em_cobranca',
+        ];
+
+        try {
+            $contact = $this->collectionBoard->addContact($paymentId, $payload, $this->currentUserId());
+            $card = $this->collectionBoard->getCardDetails($paymentId);
+            $contacts = $this->collectionBoard->listContacts($paymentId);
+            $movements = $this->collectionBoard->listMovements($paymentId);
+            $this->jsonResponse([
+                'success' => true,
+                'contact' => $contact,
+                'card' => $card,
+                'contacts' => $contacts,
+                'movements' => $movements,
+            ]);
+        } catch (Throwable $e) {
+            $this->jsonError('Não foi possível registrar o contato.', 500);
+        }
+    }
+
+    public function enviarLembrete() {
+        $this->requirePost();
+        $input = $this->requestData();
+        $paymentId = (int)($input['payment_id'] ?? 0);
+        $channel = $input['channel'] ?? '';
+        if ($paymentId <= 0 || !$channel) {
+            return $this->jsonError('Dados do lembrete inválidos.', 422);
+        }
+
+        $allowedChannels = ['email','whatsapp','sms'];
+        if (!in_array($channel, $allowedChannels, true)) {
+            return $this->jsonError('Canal de lembrete inválido.', 422);
+        }
+
+        $payload = [
+            'contact_type' => $channel,
+            'contacted_at' => $this->normalizeDateTimeInput($input['scheduled_at'] ?? null) ?? (new DateTimeImmutable())->format('Y-m-d H:i:s'),
+            'client_response' => $input['client_response'] ?? null,
+            'expected_payment_at' => $this->normalizeDateInput($input['expected_payment_at'] ?? null),
+            'notes' => $input['notes'] ?? null,
+            'is_reminder' => 1,
+        ];
+
+        try {
+            $contact = $this->collectionBoard->addContact($paymentId, $payload, $this->currentUserId());
+            $card = $this->collectionBoard->getCardDetails($paymentId);
+            $contacts = $this->collectionBoard->listContacts($paymentId);
+            $movements = $this->collectionBoard->listMovements($paymentId);
+            $this->jsonResponse([
+                'success' => true,
+                'contact' => $contact,
+                'card' => $card,
+                'contacts' => $contacts,
+                'movements' => $movements,
+            ]);
+        } catch (Throwable $e) {
+            $this->jsonError('Não foi possível registrar o lembrete.', 500);
+        }
+    }
+
+    public function detalhes($paymentId) {
+        $paymentId = (int)$paymentId;
+        if ($paymentId <= 0) {
+            return $this->jsonError('Cobrança inválida.', 404);
+        }
+
+        $card = $this->collectionBoard->getCardDetails($paymentId);
+        if (!$card) {
+            return $this->jsonError('Cobrança não encontrada ou já concluída.', 404);
+        }
+
+        $payment = $this->payments->getById($paymentId);
+        $client = null;
+        if (!empty($payment['project_client_id'])) {
+            $client = $this->clients->getById((int)$payment['project_client_id']);
+        }
+
+        $contacts = $this->collectionBoard->listContacts($paymentId);
+        $movements = $this->collectionBoard->listMovements($paymentId);
+
+        $this->jsonResponse([
+            'card' => $card,
+            'payment' => $payment,
+            'client' => $client,
+            'contacts' => $contacts,
+            'movements' => $movements,
+        ]);
     }
 
     public function criar() {
@@ -231,5 +429,258 @@ class CobrancaController {
             'message' => $mensagem,
             'trigger_at' => $trigger->format('Y-m-d H:i:s'),
         ]);
+    }
+
+    private function parseBoardFilters(array $source): array {
+        $filters = [];
+        $raw = [];
+        $columnOptions = array_keys($this->columnMeta());
+
+        $column = trim((string)($source['column'] ?? $source['status'] ?? ''));
+        if ($column !== '' && in_array($column, $columnOptions, true)) {
+            $filters['column'] = $column;
+        }
+        $raw['column'] = $column;
+
+        $valueMinInput = trim((string)($source['value_min'] ?? ''));
+        if ($valueMinInput !== '') {
+            $filters['value_min'] = Utils::decimalFromInput($valueMinInput);
+        }
+        $raw['value_min'] = $valueMinInput;
+
+        $valueMaxInput = trim((string)($source['value_max'] ?? ''));
+        if ($valueMaxInput !== '') {
+            $filters['value_max'] = Utils::decimalFromInput($valueMaxInput);
+        }
+        $raw['value_max'] = $valueMaxInput;
+
+        $clientFilter = trim((string)($source['client'] ?? ''));
+        if ($clientFilter !== '') {
+            $filters['client'] = $clientFilter;
+        }
+        $raw['client'] = $clientFilter;
+
+        $projectFilter = trim((string)($source['project'] ?? ''));
+        if ($projectFilter !== '') {
+            $filters['project'] = $projectFilter;
+        }
+        $raw['project'] = $projectFilter;
+
+        $responsavel = (int)($source['responsavel_id'] ?? 0);
+        if ($responsavel > 0) {
+            $filters['responsavel_id'] = $responsavel;
+        }
+        $raw['responsavel_id'] = $responsavel > 0 ? $responsavel : '';
+
+        $dueFromInput = trim((string)($source['due_from'] ?? ''));
+        $dueFrom = $this->normalizeDateInput($dueFromInput);
+        if ($dueFrom) {
+            $filters['due_from'] = $dueFrom;
+        }
+        $raw['due_from'] = $dueFromInput;
+
+        $dueToInput = trim((string)($source['due_to'] ?? ''));
+        $dueTo = $this->normalizeDateInput($dueToInput);
+        if ($dueTo) {
+            $filters['due_to'] = $dueTo;
+        }
+        $raw['due_to'] = $dueToInput;
+
+        $search = trim((string)($source['search'] ?? $source['buscar'] ?? ''));
+        if ($search !== '') {
+            $filters['search'] = $search;
+        }
+        $raw['search'] = $search;
+
+        $orderOptions = array_column($this->orderOptions(), 'value');
+        $orderBy = strtolower(trim((string)($source['order'] ?? '')));
+        if (!in_array($orderBy, $orderOptions, true)) {
+            $orderBy = 'due_date';
+        }
+        $filters['order_by'] = $orderBy;
+        $raw['order_by'] = $orderBy;
+
+        $orderDir = strtolower(trim((string)($source['direction'] ?? '')));
+        if (!in_array($orderDir, ['asc','desc'], true)) {
+            $orderDir = 'asc';
+        }
+        $filters['order_dir'] = $orderDir;
+        $raw['order_dir'] = $orderDir;
+
+        $filters['raw'] = $raw;
+        return $filters;
+    }
+
+    private function statusFilterOptions(): array {
+        return [
+            ['value' => '', 'label' => 'Todos'],
+            ['value' => 'a_vencer', 'label' => 'A vencer'],
+            ['value' => 'vencendo', 'label' => 'Vencendo'],
+            ['value' => 'vencido', 'label' => 'Vencido'],
+            ['value' => 'em_cobranca', 'label' => 'Em cobrança'],
+            ['value' => 'perdido', 'label' => 'Perdido'],
+        ];
+    }
+
+    private function orderOptions(): array {
+        return [
+            ['value' => 'due_date', 'label' => 'Vencimento'],
+            ['value' => 'amount', 'label' => 'Valor'],
+            ['value' => 'days_overdue', 'label' => 'Dias em atraso'],
+            ['value' => 'client_name', 'label' => 'Cliente (A-Z)'],
+        ];
+    }
+
+    private function columnMeta(): array {
+        return [
+            'a_vencer' => [
+                'title' => 'A VENCER',
+                'header_bg' => '#D1FAE5',
+                'header_text' => '#065F46',
+                'accent' => '#10B981',
+                'card_bg' => '#FFFFFF',
+                'card_text' => '#111827',
+            ],
+            'vencendo' => [
+                'title' => 'VENCENDO',
+                'header_bg' => '#FEF3C7',
+                'header_text' => '#92400E',
+                'accent' => '#F59E0B',
+                'card_bg' => '#FFFFFF',
+                'card_text' => '#111827',
+            ],
+            'vencido' => [
+                'title' => 'VENCIDO',
+                'header_bg' => '#FEE2E2',
+                'header_text' => '#991B1B',
+                'accent' => '#EF4444',
+                'card_bg' => '#FFFFFF',
+                'card_text' => '#111827',
+            ],
+            'em_cobranca' => [
+                'title' => 'EM COBRANÇA',
+                'header_bg' => '#FFEDD5',
+                'header_text' => '#9A3412',
+                'accent' => '#F97316',
+                'card_bg' => '#FFFFFF',
+                'card_text' => '#111827',
+            ],
+            'perdido' => [
+                'title' => 'PERDIDO',
+                'header_bg' => '#E5E7EB',
+                'header_text' => '#374151',
+                'accent' => '#6B7280',
+                'card_bg' => '#F9FAFB',
+                'card_text' => '#4B5563',
+                'card_opacity' => 0.7,
+            ],
+        ];
+    }
+
+    private function lostReasonOptions(): array {
+        return [
+            ['value' => 'cliente_nao_responde', 'label' => 'Cliente não responde'],
+            ['value' => 'cliente_recusa', 'label' => 'Cliente se recusa a pagar'],
+            ['value' => 'empresa_fechou', 'label' => 'Empresa fechou'],
+            ['value' => 'valor_nao_compensa', 'label' => 'Valor não compensa ação judicial'],
+            ['value' => 'outros', 'label' => 'Outros'],
+        ];
+    }
+
+    private function messageTemplates(): array {
+        return [
+            [
+                'key' => 'gentle_reminder',
+                'label' => 'Lembrete educado (3 dias antes)',
+                'body' => "Olá [NOME], tudo bem?\n\nPassando para lembrar que o pagamento do projeto [PROJETO] no valor de R$ [VALOR] vence em 3 dias (dia [DATA]).\n\nCaso já tenha realizado, desconsidere esta mensagem.\n\nQualquer dúvida, estou à disposição!",
+            ],
+            [
+                'key' => 'due_today',
+                'label' => 'Lembrete no vencimento',
+                'body' => "Olá [NOME],\n\nO pagamento do projeto [PROJETO] vence hoje. Valor: R$ [VALOR]\n\nPode confirmar o pagamento?\n\nObrigado!",
+            ],
+            [
+                'key' => 'overdue_charge',
+                'label' => 'Cobrança (vencido)',
+                'body' => "Olá [NOME],\n\nNotei que o pagamento do projeto [PROJETO] está vencido há [DIAS] dias. Valor: R$ [VALOR]\n\nPoderia me atualizar sobre o pagamento?\n\nAguardo seu retorno.",
+            ],
+        ];
+    }
+
+    private function jsonResponse(array $payload, int $status = 200): void {
+        http_response_code($status);
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode($payload);
+        exit;
+    }
+
+    private function jsonError(string $message, int $status = 400, array $extra = []): void {
+        $this->jsonResponse(array_merge(['success' => false, 'message' => $message], $extra), $status);
+    }
+
+    private function requirePost(): void {
+        if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
+            $this->jsonError('Método não permitido.', 405);
+        }
+    }
+
+    private function currentUserId(): int {
+        return (int)($_SESSION['user_id'] ?? 0);
+    }
+
+    private function requestData(): array {
+        if (!empty($_POST)) {
+            return $_POST;
+        }
+        $raw = file_get_contents('php://input');
+        if (!$raw) {
+            return [];
+        }
+        $decoded = json_decode($raw, true);
+        return is_array($decoded) ? $decoded : [];
+    }
+
+    private function normalizeDateInput(?string $value): ?string {
+        if (!$value) {
+            return null;
+        }
+        $value = trim($value);
+        if ($value === '') {
+            return null;
+        }
+        $formats = ['Y-m-d', 'd/m/Y'];
+        foreach ($formats as $format) {
+            $dt = DateTimeImmutable::createFromFormat($format, $value);
+            if ($dt instanceof DateTimeImmutable) {
+                return $dt->format('Y-m-d');
+            }
+        }
+        return null;
+    }
+
+    private function normalizeDateTimeInput(?string $value): ?string {
+        if (!$value) {
+            return null;
+        }
+        $value = trim($value);
+        if ($value === '') {
+            return null;
+        }
+        $formats = ['Y-m-d H:i', 'Y-m-d H:i:s', 'd/m/Y H:i', 'd/m/Y H:i:s'];
+        foreach ($formats as $format) {
+            $dt = DateTimeImmutable::createFromFormat($format, $value);
+            if ($dt instanceof DateTimeImmutable) {
+                return $dt->format('Y-m-d H:i:s');
+            }
+        }
+        $dateOnly = DateTimeImmutable::createFromFormat('d/m/Y', $value);
+        if ($dateOnly instanceof DateTimeImmutable) {
+            return $dateOnly->setTime(9, 0)->format('Y-m-d H:i:s');
+        }
+        $isoDate = DateTimeImmutable::createFromFormat('Y-m-d', $value);
+        if ($isoDate instanceof DateTimeImmutable) {
+            return $isoDate->setTime(9, 0)->format('Y-m-d H:i:s');
+        }
+        return null;
     }
 }
