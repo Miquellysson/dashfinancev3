@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1:3306
--- Tempo de geração: 15/10/2025 às 06:15
+-- Tempo de geração: 15/10/2025 às 08:24
 -- Versão do servidor: 11.8.3-MariaDB-log
 -- Versão do PHP: 7.2.34
 
@@ -48,7 +48,8 @@ CREATE TABLE IF NOT EXISTS `billing_cases` (
 -- Despejando dados para a tabela `billing_cases`
 --
 
-INSERT INTO `billing_cases` (`id`, `client_id`, `responsavel_id`, `origem`, `origem_id`, `titulo`, `valor_total`, `valor_pendente`, `status`, `prioridade`, `proxima_acao_em`, `encerrado_em`, `observacoes`, `created_at`, `updated_at`) VALUES (1, 18, 2, 'payment', NULL, 'cobrança', 0.00, 0.00, 'aberto', 'alta', '2026-12-12 18:59:00', NULL, '1212', '2025-10-11 07:54:32', '2025-10-11 07:54:32'),
+INSERT INTO `billing_cases` (`id`, `client_id`, `responsavel_id`, `origem`, `origem_id`, `titulo`, `valor_total`, `valor_pendente`, `status`, `prioridade`, `proxima_acao_em`, `encerrado_em`, `observacoes`, `created_at`, `updated_at`) VALUES
+(1, 18, 2, 'payment', NULL, 'cobrança', 0.00, 0.00, 'aberto', 'alta', '2026-12-12 18:59:00', NULL, '1212', '2025-10-11 07:54:32', '2025-10-11 07:54:32'),
 (2, 14, 1, 'manual', NULL, 'ssdsd', 0.00, 0.00, 'aberto', 'baixa', '2025-10-08 06:22:00', '2025-10-23 06:23:00', 'dsdsd', '2025-10-11 09:23:04', '2025-10-11 09:23:04') ON DUPLICATE KEY UPDATE `id`=VALUES(`id`), `client_id`=VALUES(`client_id`), `responsavel_id`=VALUES(`responsavel_id`), `origem`=VALUES(`origem`), `origem_id`=VALUES(`origem_id`), `titulo`=VALUES(`titulo`), `valor_total`=VALUES(`valor_total`), `valor_pendente`=VALUES(`valor_pendente`), `status`=VALUES(`status`), `prioridade`=VALUES(`prioridade`), `proxima_acao_em`=VALUES(`proxima_acao_em`), `encerrado_em`=VALUES(`encerrado_em`), `observacoes`=VALUES(`observacoes`), `created_at`=VALUES(`created_at`), `updated_at`=VALUES(`updated_at`);
 
 -- --------------------------------------------------------
@@ -93,7 +94,8 @@ CREATE TABLE IF NOT EXISTS `clients` (
 -- Despejando dados para a tabela `clients`
 --
 
-INSERT INTO `clients` (`id`, `name`, `email`, `phone`, `entry_date`, `notes`, `created_at`, `updated_at`) VALUES (1, 'VC Business', 'marketing@arkaleads.com', '', '2025-09-24', '', '2025-09-25 00:25:23', '2025-09-25 00:25:23'),
+INSERT INTO `clients` (`id`, `name`, `email`, `phone`, `entry_date`, `notes`, `created_at`, `updated_at`) VALUES
+(1, 'VC Business', 'marketing@arkaleads.com', '', '2025-09-24', '', '2025-09-25 00:25:23', '2025-09-25 00:25:23'),
 (2, 'Voice', '', '', '2025-09-25', '', '2025-09-25 13:34:58', '2025-09-25 13:34:58'),
 (3, 'Victor - Farma Facil', '', '', '2025-09-25', '', '2025-09-25 13:35:16', '2025-09-25 13:35:16'),
 (4, 'Ana', '', '', '2025-09-25', '', '2025-09-25 13:35:24', '2025-09-25 13:35:24'),
@@ -142,7 +144,8 @@ CREATE TABLE IF NOT EXISTS `collection_cards` (
 -- Despejando dados para a tabela `collection_cards`
 --
 
-INSERT INTO `collection_cards` (`id`, `payment_id`, `manual_status`, `status_since`, `last_contact_at`, `last_contact_channel`, `last_contact_notes`, `lost_reason`, `lost_details`, `lost_at`, `created_by`, `updated_by`, `created_at`, `updated_at`) VALUES (1, 5, 'em_cobranca', '2025-10-15 00:23:51', '2025-10-15 00:23:51', 'email', 'POREM NADA\n', NULL, NULL, NULL, 1, 1, '2025-10-15 03:22:35', '2025-10-15 00:23:51') ON DUPLICATE KEY UPDATE `id`=VALUES(`id`), `payment_id`=VALUES(`payment_id`), `manual_status`=VALUES(`manual_status`), `status_since`=VALUES(`status_since`), `last_contact_at`=VALUES(`last_contact_at`), `last_contact_channel`=VALUES(`last_contact_channel`), `last_contact_notes`=VALUES(`last_contact_notes`), `lost_reason`=VALUES(`lost_reason`), `lost_details`=VALUES(`lost_details`), `lost_at`=VALUES(`lost_at`), `created_by`=VALUES(`created_by`), `updated_by`=VALUES(`updated_by`), `created_at`=VALUES(`created_at`), `updated_at`=VALUES(`updated_at`);
+INSERT INTO `collection_cards` (`id`, `payment_id`, `manual_status`, `status_since`, `last_contact_at`, `last_contact_channel`, `last_contact_notes`, `lost_reason`, `lost_details`, `lost_at`, `created_by`, `updated_by`, `created_at`, `updated_at`) VALUES
+(1, 5, 'em_cobranca', '2025-10-15 00:23:51', '2025-10-15 00:23:51', 'email', 'POREM NADA\n', NULL, NULL, NULL, 1, 1, '2025-10-15 03:22:35', '2025-10-15 00:23:51') ON DUPLICATE KEY UPDATE `id`=VALUES(`id`), `payment_id`=VALUES(`payment_id`), `manual_status`=VALUES(`manual_status`), `status_since`=VALUES(`status_since`), `last_contact_at`=VALUES(`last_contact_at`), `last_contact_channel`=VALUES(`last_contact_channel`), `last_contact_notes`=VALUES(`last_contact_notes`), `lost_reason`=VALUES(`lost_reason`), `lost_details`=VALUES(`lost_details`), `lost_at`=VALUES(`lost_at`), `created_by`=VALUES(`created_by`), `updated_by`=VALUES(`updated_by`), `created_at`=VALUES(`created_at`), `updated_at`=VALUES(`updated_at`);
 
 -- --------------------------------------------------------
 
@@ -168,7 +171,8 @@ CREATE TABLE IF NOT EXISTS `collection_contacts` (
 -- Despejando dados para a tabela `collection_contacts`
 --
 
-INSERT INTO `collection_contacts` (`id`, `card_id`, `payment_id`, `contact_type`, `contacted_at`, `client_response`, `expected_payment_at`, `notes`, `is_reminder`, `created_by`, `created_at`) VALUES (1, 1, 5, 'whatsapp', '2025-10-15 00:23:31', 'TENTEI LIGAR\n', NULL, '', 0, 1, '2025-10-15 03:23:31'),
+INSERT INTO `collection_contacts` (`id`, `card_id`, `payment_id`, `contact_type`, `contacted_at`, `client_response`, `expected_payment_at`, `notes`, `is_reminder`, `created_by`, `created_at`) VALUES
+(1, 1, 5, 'whatsapp', '2025-10-15 00:23:31', 'TENTEI LIGAR\n', NULL, '', 0, 1, '2025-10-15 03:23:31'),
 (2, 1, 5, 'whatsapp', '2025-10-15 00:23:32', 'TENTEI LIGAR\n', NULL, '', 0, 1, '2025-10-15 03:23:32'),
 (3, 1, 5, 'whatsapp', '2025-10-15 00:23:36', 'TENTEI LIGAR\n', NULL, 'POREM NADA\n', 0, 1, '2025-10-15 03:23:36'),
 (4, 1, 5, 'whatsapp', '2025-10-15 00:23:38', 'TENTEI LIGAR\n', NULL, 'POREM NADA\n', 0, 1, '2025-10-15 03:23:38'),
@@ -202,7 +206,8 @@ CREATE TABLE IF NOT EXISTS `collection_movements` (
 -- Despejando dados para a tabela `collection_movements`
 --
 
-INSERT INTO `collection_movements` (`id`, `card_id`, `payment_id`, `from_status`, `to_status`, `reason_code`, `notes`, `created_by`, `created_at`) VALUES (1, 1, 5, 'vencido', 'a_vencer', 'create_manual', NULL, 1, '2025-10-15 03:22:35'),
+INSERT INTO `collection_movements` (`id`, `card_id`, `payment_id`, `from_status`, `to_status`, `reason_code`, `notes`, `created_by`, `created_at`) VALUES
+(1, 1, 5, 'vencido', 'a_vencer', 'create_manual', NULL, 1, '2025-10-15 03:22:35'),
 (2, 1, 5, 'a_vencer', 'em_cobranca', 'manual_collection', 'PENSA QUE É BESTA? \n', 1, '2025-10-15 03:23:21'),
 (3, 1, 5, 'em_cobranca', 'em_cobranca', 'auto_contact', 'Movido automaticamente após registrar contato.', 1, '2025-10-15 03:23:31'),
 (4, 1, 5, 'em_cobranca', 'em_cobranca', 'auto_contact', 'Movido automaticamente após registrar contato.', 1, '2025-10-15 03:23:32'),
@@ -256,7 +261,8 @@ CREATE TABLE IF NOT EXISTS `goals` (
 -- Despejando dados para a tabela `goals`
 --
 
-INSERT INTO `goals` (`id`, `period_type`, `period_start`, `period_end`, `target_value`, `created_at`, `updated_at`) VALUES (1, 'monthly', '2025-09-01', '2025-09-27', 12333.00, '2025-09-24 21:57:50', '2025-09-24 21:57:50'),
+INSERT INTO `goals` (`id`, `period_type`, `period_start`, `period_end`, `target_value`, `created_at`, `updated_at`) VALUES
+(1, 'monthly', '2025-09-01', '2025-09-27', 12333.00, '2025-09-24 21:57:50', '2025-09-24 21:57:50'),
 (2, 'daily', '2025-09-25', '2025-09-25', 1688.00, '2025-09-24 22:08:06', '2025-09-24 22:08:06'),
 (3, 'monthly', '2025-10-14', '2025-10-17', 342342.00, '2025-10-10 21:32:29', '2025-10-10 21:32:29'),
 (4, 'monthly', '2025-10-11', '2025-10-11', 214.00, '2025-10-10 21:32:47', '2025-10-10 21:32:47'),
@@ -286,7 +292,8 @@ CREATE TABLE IF NOT EXISTS `notifications` (
 -- Despejando dados para a tabela `notifications`
 --
 
-INSERT INTO `notifications` (`id`, `user_id`, `resource_type`, `resource_id`, `title`, `message`, `trigger_at`, `read_at`, `sound`, `created_at`, `updated_at`) VALUES (1, 2, 'billing_case', 1, 'Follow-up de cobrança agendado', 'Há uma ação programada para o caso \"cobrança\".', '2026-12-12 18:59:00', NULL, 1, '2025-10-11 07:54:32', '2025-10-11 07:54:32') ON DUPLICATE KEY UPDATE `id`=VALUES(`id`), `user_id`=VALUES(`user_id`), `resource_type`=VALUES(`resource_type`), `resource_id`=VALUES(`resource_id`), `title`=VALUES(`title`), `message`=VALUES(`message`), `trigger_at`=VALUES(`trigger_at`), `read_at`=VALUES(`read_at`), `sound`=VALUES(`sound`), `created_at`=VALUES(`created_at`), `updated_at`=VALUES(`updated_at`);
+INSERT INTO `notifications` (`id`, `user_id`, `resource_type`, `resource_id`, `title`, `message`, `trigger_at`, `read_at`, `sound`, `created_at`, `updated_at`) VALUES
+(1, 2, 'billing_case', 1, 'Follow-up de cobrança agendado', 'Há uma ação programada para o caso \"cobrança\".', '2026-12-12 18:59:00', NULL, 1, '2025-10-11 07:54:32', '2025-10-11 07:54:32') ON DUPLICATE KEY UPDATE `id`=VALUES(`id`), `user_id`=VALUES(`user_id`), `resource_type`=VALUES(`resource_type`), `resource_id`=VALUES(`resource_id`), `title`=VALUES(`title`), `message`=VALUES(`message`), `trigger_at`=VALUES(`trigger_at`), `read_at`=VALUES(`read_at`), `sound`=VALUES(`sound`), `created_at`=VALUES(`created_at`), `updated_at`=VALUES(`updated_at`);
 
 -- --------------------------------------------------------
 
@@ -316,7 +323,8 @@ CREATE TABLE IF NOT EXISTS `payments` (
 -- Despejando dados para a tabela `payments`
 --
 
-INSERT INTO `payments` (`id`, `project_id`, `client_id`, `kind`, `transaction_type`, `description`, `category`, `notes`, `amount`, `currency`, `due_date`, `paid_at`, `status_id`, `created_at`, `updated_at`) VALUES (1, 1, NULL, 'one_time', 'receita', NULL, NULL, NULL, 1650.00, 'BRL', NULL, '2025-09-14', 1, '2025-09-25 00:26:29', '2025-09-25 13:34:15'),
+INSERT INTO `payments` (`id`, `project_id`, `client_id`, `kind`, `transaction_type`, `description`, `category`, `notes`, `amount`, `currency`, `due_date`, `paid_at`, `status_id`, `created_at`, `updated_at`) VALUES
+(1, 1, NULL, 'one_time', 'receita', NULL, NULL, NULL, 1650.00, 'BRL', NULL, '2025-09-14', 1, '2025-09-25 00:26:29', '2025-09-25 13:34:15'),
 (2, 10, NULL, 'one_time', 'receita', NULL, NULL, NULL, 700.00, 'BRL', NULL, '2025-09-23', 1, '2025-09-25 13:52:20', '2025-09-25 13:53:07'),
 (3, 10, NULL, 'one_time', 'receita', NULL, NULL, NULL, 700.00, 'BRL', '2025-10-08', NULL, 1, '2025-09-25 13:54:43', '2025-10-15 01:29:57'),
 (4, 16, NULL, 'one_time', 'receita', 'ssdsadasd', 'dasdsad', NULL, 124.00, 'BRL', '2025-10-16', NULL, 5, '2025-10-15 01:29:25', '2025-10-15 01:29:25'),
@@ -360,7 +368,8 @@ CREATE TABLE IF NOT EXISTS `projects` (
 -- Despejando dados para a tabela `projects`
 --
 
-INSERT INTO `projects` (`id`, `client_id`, `nome_cliente`, `data_entrada`, `name`, `status`, `project_value`, `status_id`, `due_date`, `paid_at`, `recurrence_active`, `recurrence_value`, `recurrence_frequency`, `recurrence_next_date`, `created_at`, `updated_at`, `tipo_servico`, `status_satisfacao`, `valor_projeto`, `status_pagamento`, `valor_pago`, `valor_pendente`, `observacoes`, `usuario_responsavel_id`, `deleted_at`) VALUES (1, 1, 'VC Business', '2025-10-10 14:14:25', 'Trafego Pago', 'ativo', 1650.00, 4, '2025-09-14', '2025-10-14', 0, NULL, NULL, NULL, '2025-09-25 00:26:06', '2025-09-25 00:26:06', 'Desenvolvimento Web', 'Aguardando Feedback', 1650.00, 'Pendente', 0.00, 1650.00, NULL, NULL, NULL),
+INSERT INTO `projects` (`id`, `client_id`, `nome_cliente`, `data_entrada`, `name`, `status`, `project_value`, `status_id`, `due_date`, `paid_at`, `recurrence_active`, `recurrence_value`, `recurrence_frequency`, `recurrence_next_date`, `created_at`, `updated_at`, `tipo_servico`, `status_satisfacao`, `valor_projeto`, `status_pagamento`, `valor_pago`, `valor_pendente`, `observacoes`, `usuario_responsavel_id`, `deleted_at`) VALUES
+(1, 1, 'VC Business', '2025-10-10 14:14:25', 'Trafego Pago', 'ativo', 1650.00, 4, '2025-09-14', '2025-10-14', 0, NULL, NULL, NULL, '2025-09-25 00:26:06', '2025-09-25 00:26:06', 'Desenvolvimento Web', 'Aguardando Feedback', 1650.00, 'Pendente', 0.00, 1650.00, NULL, NULL, NULL),
 (2, 16, '2 The Point Cleaning', '2025-10-10 14:14:25', 'Site + GBP + Redes Socias', 'ativo', 1400.00, 4, '2025-09-22', '2025-09-29', 0, NULL, NULL, NULL, '2025-09-25 13:38:57', '2025-09-25 13:38:57', 'Desenvolvimento Web', 'Aguardando Feedback', 1400.00, 'Pendente', 0.00, 1400.00, NULL, NULL, NULL),
 (3, 14, 'AJ Carpentry', '2025-10-10 14:14:25', 'Site + GBP + Redes Socias', 'ativo', 1400.00, 4, '2025-09-19', '2025-09-26', 0, NULL, NULL, NULL, '2025-09-25 13:39:42', '2025-09-25 13:39:42', 'Desenvolvimento Web', 'Aguardando Feedback', 1400.00, 'Pendente', 0.00, 1400.00, NULL, NULL, NULL),
 (4, 4, 'Ana', '2025-10-10 14:14:25', 'Criação Ecommerce', 'ativo', 1400.00, 4, '2025-08-20', '2025-09-30', 0, NULL, NULL, NULL, '2025-09-25 13:40:19', '2025-09-25 13:40:19', 'Desenvolvimento Web', 'Aguardando Feedback', 1400.00, 'Pendente', 0.00, 1400.00, NULL, NULL, NULL),
@@ -422,7 +431,8 @@ CREATE TABLE IF NOT EXISTS `rate_limits` (
 -- Despejando dados para a tabela `rate_limits`
 --
 
-INSERT INTO `rate_limits` (`id`, `ip`, `rota`, `tentativas`, `primeiro_registro`, `ultimo_registro`) VALUES (1, '170.84.159.212', 'user_create', 1, '2025-10-11 21:03:05', '2025-10-11 21:03:05') ON DUPLICATE KEY UPDATE `id`=VALUES(`id`), `ip`=VALUES(`ip`), `rota`=VALUES(`rota`), `tentativas`=VALUES(`tentativas`), `primeiro_registro`=VALUES(`primeiro_registro`), `ultimo_registro`=VALUES(`ultimo_registro`);
+INSERT INTO `rate_limits` (`id`, `ip`, `rota`, `tentativas`, `primeiro_registro`, `ultimo_registro`) VALUES
+(1, '170.84.159.212', 'user_create', 1, '2025-10-11 21:03:05', '2025-10-11 21:03:05') ON DUPLICATE KEY UPDATE `id`=VALUES(`id`), `ip`=VALUES(`ip`), `rota`=VALUES(`rota`), `tentativas`=VALUES(`tentativas`), `primeiro_registro`=VALUES(`primeiro_registro`), `ultimo_registro`=VALUES(`ultimo_registro`);
 
 -- --------------------------------------------------------
 
@@ -443,7 +453,8 @@ CREATE TABLE IF NOT EXISTS `status_catalog` (
 -- Despejando dados para a tabela `status_catalog`
 --
 
-INSERT INTO `status_catalog` (`id`, `name`, `color_hex`, `sort_order`, `created_at`, `updated_at`) VALUES (1, 'Recebido', '#1cc88a', 1, '2025-09-24 19:50:20', NULL),
+INSERT INTO `status_catalog` (`id`, `name`, `color_hex`, `sort_order`, `created_at`, `updated_at`) VALUES
+(1, 'Recebido', '#1cc88a', 1, '2025-09-24 19:50:20', NULL),
 (2, 'Pago', '#1cc88a', 2, '2025-09-24 19:50:20', NULL),
 (3, 'A Receber', '#f6c23e', 3, '2025-09-24 19:50:20', NULL),
 (4, 'Pendente', '#f6c23e', 4, '2025-09-24 19:50:20', NULL),
@@ -512,7 +523,8 @@ CREATE TABLE IF NOT EXISTS `users` (
 -- Despejando dados para a tabela `users`
 --
 
-INSERT INTO `users` (`id`, `nome_completo`, `email`, `telefone`, `cargo`, `foto_perfil`, `ativo`, `data_cadastro`, `ultimo_acesso`, `senha_atualizada_em`, `deleted_at`, `password`, `password_reset_token`, `password_reset_expires`, `tipo_usuario`, `created_at`, `updated_at`) VALUES (1, 'Administrador', 'marketing@arkaleads.com', NULL, NULL, NULL, 1, '2025-10-10 14:17:22', '2025-10-15 03:21:37', '2025-10-11 14:07:55', NULL, '$2y$10$2eDMtIEFq50WX9C9uFHo1OkKULVPJz5htY5b6dJYaUFocSYyeCAQG', NULL, NULL, 'Admin', '2025-09-24 20:08:43', '2025-10-15 03:21:37'),
+INSERT INTO `users` (`id`, `nome_completo`, `email`, `telefone`, `cargo`, `foto_perfil`, `ativo`, `data_cadastro`, `ultimo_acesso`, `senha_atualizada_em`, `deleted_at`, `password`, `password_reset_token`, `password_reset_expires`, `tipo_usuario`, `created_at`, `updated_at`) VALUES
+(1, 'Administrador', 'marketing@arkaleads.com', NULL, NULL, NULL, 1, '2025-10-10 14:17:22', '2025-10-15 03:21:37', '2025-10-11 14:07:55', NULL, '$2y$10$2eDMtIEFq50WX9C9uFHo1OkKULVPJz5htY5b6dJYaUFocSYyeCAQG', NULL, NULL, 'Admin', '2025-09-24 20:08:43', '2025-10-15 03:21:37'),
 (2, 'tainon vargas', 'tainon@arkaleads.com', NULL, NULL, '/uploads/avatars/avatar_68e9871261bca8.50277516.png', 1, '2025-10-10 22:22:10', '2025-10-13 22:37:47', '2025-10-10 22:22:10', NULL, '$2y$10$hZhcFzAxqlcvJC8SnQM7/uYhyL5PwBnayGgNLZhqfY7dxm3h9d71m', NULL, NULL, 'Gerente', '2025-10-10 22:22:10', '2025-10-13 22:37:47'),
 (3, 'MIke lins', 'mike@arkaleads.com', NULL, NULL, NULL, 1, '2025-10-11 21:03:06', '2025-10-15 01:28:56', '2025-10-11 21:03:06', NULL, '$2y$10$O46xMJzmQcqc1eKBllI6uO/DMZj6Rj9PvxbB0nIElQbRkmgnvamt.', NULL, NULL, 'Admin', '2025-10-11 21:03:06', '2025-10-15 01:28:56') ON DUPLICATE KEY UPDATE `id`=VALUES(`id`), `nome_completo`=VALUES(`nome_completo`), `email`=VALUES(`email`), `telefone`=VALUES(`telefone`), `cargo`=VALUES(`cargo`), `foto_perfil`=VALUES(`foto_perfil`), `ativo`=VALUES(`ativo`), `data_cadastro`=VALUES(`data_cadastro`), `ultimo_acesso`=VALUES(`ultimo_acesso`), `senha_atualizada_em`=VALUES(`senha_atualizada_em`), `deleted_at`=VALUES(`deleted_at`), `password`=VALUES(`password`), `password_reset_token`=VALUES(`password_reset_token`), `password_reset_expires`=VALUES(`password_reset_expires`), `tipo_usuario`=VALUES(`tipo_usuario`), `created_at`=VALUES(`created_at`), `updated_at`=VALUES(`updated_at`);
 
@@ -565,83 +577,73 @@ CREATE TABLE IF NOT EXISTS `user_sessions` (
 --
 -- Índices de tabela `billing_cases`
 --
-
-  ADD KEY `fk_billing_cases_client` (`client_id`),
-  ADD KEY `fk_billing_cases_responsavel` (`responsavel_id`);
-
+ALTER TABLE `billing_cases`
+  ADD KEY `idx_billing_cases_client` (`client_id`),
+  ADD KEY `idx_billing_cases_responsavel` (`responsavel_id`);
 --
 -- Índices de tabela `billing_tasks`
 --
-
-  ADD KEY `case_id` (`case_id`),
-  ADD KEY `responsavel_id` (`responsavel_id`);
-
+ALTER TABLE `billing_tasks`
+  ADD KEY `idx_billing_tasks_case` (`case_id`),
+  ADD KEY `idx_billing_tasks_responsavel` (`responsavel_id`);
 --
 -- Índices de tabela `clients`
 --
-
+ALTER TABLE `clients`
   ADD KEY `idx_clients_entry_date` (`entry_date`);
-
 --
 -- Índices de tabela `collection_cards`
 --
-
+ALTER TABLE `collection_cards`
   ADD UNIQUE KEY `uniq_collection_cards_payment` (`payment_id`),
-  ADD KEY `fk_collection_card_created_by` (`created_by`),
-  ADD KEY `fk_collection_card_updated_by` (`updated_by`);
-
+  ADD KEY `idx_collection_cards_created_by` (`created_by`),
+  ADD KEY `idx_collection_cards_updated_by` (`updated_by`);
 --
 -- Índices de tabela `collection_contacts`
 --
-
+ALTER TABLE `collection_contacts`
   ADD KEY `fk_collection_contact_card` (`card_id`),
   ADD KEY `fk_collection_contact_user` (`created_by`),
   ADD KEY `idx_collection_contacts_payment` (`payment_id`),
   ADD KEY `idx_collection_contacts_contacted_at` (`contacted_at`);
-
 --
 -- Índices de tabela `collection_movements`
 --
-
+ALTER TABLE `collection_movements`
   ADD KEY `fk_collection_move_card` (`card_id`),
   ADD KEY `fk_collection_move_user` (`created_by`),
   ADD KEY `idx_collection_movements_payment` (`payment_id`),
   ADD KEY `idx_collection_movements_created_at` (`created_at`);
-
 --
 -- Índices de tabela `financial_reserve_entries`
 --
-
+ALTER TABLE `financial_reserve_entries`
   ADD KEY `idx_financial_reserve_type` (`operation_type`),
   ADD KEY `idx_financial_reserve_date` (`reference_date`),
-  ADD KEY `fk_financial_reserve_created_by` (`created_by`);
-
+  ADD KEY `idx_financial_reserve_created_by` (`created_by`);
 --
 -- Índices de tabela `goals`
 --
-
+ALTER TABLE `goals`
   ADD KEY `idx_goals_period` (`period_start`,`period_end`);
-
 --
 -- Índices de tabela `notifications`
 --
-
+ALTER TABLE `notifications`
   ADD KEY `idx_notifications_user_read` (`user_id`,`read_at`),
   ADD KEY `idx_notifications_trigger` (`trigger_at`);
-
 --
 -- Índices de tabela `payments`
 --
-
+ALTER TABLE `payments`
   ADD KEY `idx_payments_project` (`project_id`),
   ADD KEY `idx_payments_status` (`status_id`),
   ADD KEY `idx_payments_due` (`due_date`),
   ADD KEY `fk_payments_clients` (`client_id`);
-
 --
 -- Índices de tabela `projects`
 --
-
+ALTER TABLE `projects`
   ADD KEY `idx_projects_client` (`client_id`),
   ADD KEY `idx_projects_status` (`status_id`),
   ADD KEY `idx_projects_nome_cliente` (`nome_cliente`),
@@ -649,55 +651,47 @@ CREATE TABLE IF NOT EXISTS `user_sessions` (
   ADD KEY `idx_projects_tipo_servico` (`tipo_servico`),
   ADD KEY `idx_projects_data_entrada` (`data_entrada`),
   ADD KEY `idx_projects_usuario` (`usuario_responsavel_id`);
-
 --
 -- Índices de tabela `project_activities`
 --
-
+ALTER TABLE `project_activities`
   ADD KEY `idx_project_activities_projeto` (`projeto_id`),
   ADD KEY `idx_project_activities_status` (`status_atividade`),
   ADD KEY `idx_project_activities_prioridade` (`prioridade`),
   ADD KEY `project_activities_responsavel_idx` (`responsavel_id`);
-
 --
 -- Índices de tabela `rate_limits`
 --
-
+ALTER TABLE `rate_limits`
   ADD KEY `idx_rate_limits_ip_rota` (`ip`,`rota`);
-
 --
 -- Índices de tabela `status_catalog`
 --
-
+ALTER TABLE `status_catalog`
   ADD UNIQUE KEY `uk_status_catalog_name` (`name`);
-
 --
 -- Índices de tabela `templates_library`
 --
-
+ALTER TABLE `templates_library`
   ADD KEY `idx_templates_category` (`category`),
   ADD KEY `idx_templates_type` (`template_type`);
-
 --
 -- Índices de tabela `users`
 --
-
+ALTER TABLE `users`
   ADD UNIQUE KEY `email` (`email`);
-
 --
 -- Índices de tabela `user_audit_logs`
 --
-
+ALTER TABLE `user_audit_logs`
   ADD KEY `idx_user_audit_usuario` (`usuario_id`),
   ADD KEY `idx_user_audit_acao` (`acao`);
-
 --
 -- Índices de tabela `user_sessions`
 --
-
+ALTER TABLE `user_sessions`
   ADD UNIQUE KEY `uk_user_sessions` (`session_id`),
   ADD KEY `usuario_id` (`usuario_id`);
-
 --
 -- AUTO_INCREMENT para tabelas despejadas
 --

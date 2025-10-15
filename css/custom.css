@@ -1,8 +1,8 @@
 /* Custom CSS alinhado à paleta Arka Leads */
 
 :root {
-    --color-primary-500: #D2EB17;
-    --color-primary-600: #A4B61D;
+    --color-primary-500: #2d301d;
+    --color-primary-600: #393832;
     --color-primary-700: #0A0316;
     --color-success-500: #D4EB29;
     --color-info-500: #D0E436;
@@ -38,7 +38,7 @@ body {
 
 .sidebar .nav-item .nav-link:hover,
 .sidebar .nav-item.active .nav-link {
-    background-color: rgba(210, 235, 23, 0.12);
+    background-color: #fffac6;
 }
 
 /* Cards padrão */
