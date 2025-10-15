@@ -662,10 +662,22 @@ body {
     box-shadow: inset 0 0 0 1px rgba(17, 24, 39, 0.05);
 }
 
+.kanban-column.is-drop-target {
+    box-shadow: inset 0 0 0 2px rgba(59, 130, 246, 0.35), 0 0 12px rgba(59, 130, 246, 0.15);
+}
+
 .kanban-column-header {
     padding: 1rem;
     border-top-left-radius: 1rem;
     border-top-right-radius: 1rem;
+}
+
+.kanban-column-header-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-bottom: 0.35rem;
 }
 
 .kanban-column-title {
@@ -677,8 +689,8 @@ body {
 .kanban-column-meta {
     font-size: 0.8rem;
     display: flex;
-    justify-content: space-between;
-    margin-top: 0.5rem;
+    flex-wrap: wrap;
+    gap: 0.5rem;
     opacity: 0.85;
 }
 
@@ -706,6 +718,10 @@ body {
     background: #FFFFFF;
     box-shadow: 0 10px 20px rgba(15, 23, 42, 0.08);
     transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.kanban-board.is-dragging .kanban-card {
+    opacity: 0.85;
 }
 
 .kanban-card:hover {
@@ -780,6 +796,61 @@ body {
     width: 10px;
     height: 10px;
     margin-right: 0.25rem;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+.kanban-add-card {
+    font-size: 0.7rem;
+    letter-spacing: 0.05em;
+    font-weight: 600;
+    border-radius: 999px;
+    border: 1px dashed rgba(17, 24, 39, 0.25);
+    background: rgba(255, 255, 255, 0.8);
+    color: #111827;
+    padding: 0.35rem 0.75rem;
+    transition: all 0.2s ease;
+}
+
+.kanban-add-card:hover {
+    border-color: rgba(59, 130, 246, 0.5);
+    color: #2563EB;
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+}
+
+.priority-tag {
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    padding: 0.2rem 0.5rem;
+    border-radius: 999px;
+    margin-left: 0.5rem;
+    letter-spacing: 0.06em;
+    border: 1px solid transparent;
+}
+
+.priority-critica {
+    background: rgba(239, 68, 68, 0.12);
+    color: #B91C1C;
+    border-color: rgba(239, 68, 68, 0.35);
+}
+
+.priority-alta {
+    background: rgba(249, 115, 22, 0.12);
+    color: #C2410C;
+    border-color: rgba(249, 115, 22, 0.35);
+}
+
+.priority-media {
+    background: rgba(234, 179, 8, 0.12);
+    color: #A16207;
+    border-color: rgba(234, 179, 8, 0.35);
+}
+
+.priority-baixa {
+    background: rgba(16, 185, 129, 0.12);
+    color: #047857;
+    border-color: rgba(16, 185, 129, 0.35);
 }
 
 .kanban-toast {

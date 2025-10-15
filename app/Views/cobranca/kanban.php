@@ -47,9 +47,15 @@ $jsonMeta = json_encode([
     <h1 class="h3 mb-2">Gestão de Cobranças</h1>
     <p class="text-muted mb-0">Acompanhe e gerencie todas as cobranças pendentes</p>
   </div>
-  <div class="kanban-alert badge badge-pill badge-warning mt-3 mt-lg-0">
-    <span class="mr-2">🔔</span>
-    <span><strong><?= $dueTodayCount ?></strong> vencendo hoje</span>
+  <div class="d-flex flex-column flex-lg-row align-items-lg-center">
+    <div class="kanban-alert badge badge-pill badge-warning mb-2 mb-lg-0 mr-lg-3">
+      <span class="mr-2">🔔</span>
+      <span><strong><?= $dueTodayCount ?></strong> vencendo hoje</span>
+    </div>
+    <div class="kanban-view-toggle btn-group" role="group" aria-label="Alternar visualização">
+      <a href="/cobranca" class="btn btn-sm btn-primary active" data-view="kanban">Quadro</a>
+      <a href="/cobranca?modo=legacy" class="btn btn-sm btn-outline-primary" data-view="lista">Lista</a>
+    </div>
   </div>
 </div>
 
@@ -65,7 +71,7 @@ $jsonMeta = json_encode([
     </div>
     <div class="summary-item">
       <div class="summary-label">Vencendo hoje</div>
-      <div class="summary-value text-warning"><?= $dueTodayCount ?> <small class="text-muted d-block"><?= h($dueTodayAmount) ?></small></div>
+      <div class="summary-value text-warning"><span class="summary-due-today-count"><?= $dueTodayCount ?></span> <small class="text-muted d-block summary-due-today-amount"><?= h($dueTodayAmount) ?></small></div>
     </div>
     <div class="summary-item">
       <div class="summary-label">Total vencido</div>
@@ -161,10 +167,16 @@ $jsonMeta = json_encode([
   ?>
     <div class="kanban-column" data-column="<?= h($status) ?>">
       <div class="kanban-column-header" style="<?= $headerStyle ?>">
-        <div class="kanban-column-title"><?= h($meta['title']) ?></div>
+        <div class="kanban-column-header-top d-flex align-items-center justify-content-between">
+          <div class="kanban-column-title mb-0"><?= h($meta['title']) ?></div>
+          <button class="btn btn-sm btn-light kanban-add-card" type="button" data-status="<?= h($status) ?>" data-add-url="/pagamento/create?status=<?= h($status) ?>">
+            <i class="fas fa-plus mr-1"></i>Nova cobrança
+          </button>
+        </div>
         <div class="kanban-column-meta">
-          <span><?= (int)($totals['clients'] ?? 0) ?> clientes</span>
-          <span><?= h($amountFormatted) ?></span>
+          <span class="kanban-column-count" data-role="cards"><?= (int)($totals['cards'] ?? 0) ?> itens</span>
+          <span class="kanban-column-count" data-role="clients"><?= (int)($totals['clients'] ?? 0) ?> clientes</span>
+          <span class="kanban-column-amount" data-role="amount"><?= h($amountFormatted) ?></span>
         </div>
       </div>
       <div class="kanban-column-body" data-status="<?= h($status) ?>">
@@ -186,6 +198,21 @@ $jsonMeta = json_encode([
             $lostReason = $card['lost_reason'] ?? null;
             $lostDetails = $card['lost_details'] ?? null;
             $cardBorderStyle = 'border-left-color: ' . $accentColor . ';';
+            $priorityLevel = 'baixa';
+            if ($daysOverdue > 0) {
+                $priorityLevel = 'critica';
+            } elseif ($daysUntilDue !== null && $daysUntilDue <= 1) {
+                $priorityLevel = 'alta';
+            } elseif ($daysUntilDue !== null && $daysUntilDue <= 3) {
+                $priorityLevel = 'media';
+            }
+            $priorityLabels = [
+                'critica' => 'Crítica',
+                'alta' => 'Alta',
+                'media' => 'Média',
+                'baixa' => 'Baixa',
+            ];
+            $priorityLabel = $priorityLabels[$priorityLevel] ?? 'Baixa';
           ?>
             <div class="<?= implode(' ', $cardClasses) ?>" data-payment-id="<?= (int)$card['payment_id'] ?>"
                  data-status="<?= h($status) ?>"
@@ -199,12 +226,16 @@ $jsonMeta = json_encode([
                  data-last-contact="<?= h($card['last_contact_at'] ?? '') ?>"
                  data-last-channel="<?= h($card['last_contact_channel'] ?? '') ?>"
                  data-lost-reason="<?= h($lostReason ?? '') ?>"
-                 data-lost-details="<?= h($lostDetails ?? '') ?>">
+                 data-lost-details="<?= h($lostDetails ?? '') ?>"
+                 data-priority="<?= h($priorityLevel) ?>">
               <div class="kanban-card-inner" style="<?= $cardBorderStyle ?>">
                 <div class="kanban-card-header">
                   <div class="d-flex align-items-center">
                     <span class="status-dot" style="background-color: <?= $accentColor ?>"></span>
                     <span class="client-name"><?= h($card['client_name']) ?></span>
+                    <span class="priority-tag priority-<?= h($priorityLevel) ?>" title="Prioridade <?= h($priorityLabel) ?>">
+                      <?= h($priorityLabel) ?>
+                    </span>
                     <?php if (in_array('alto_valor', $badges, true)): ?>
                       <span class="badge badge-soft-warning badge-pill ml-2">Alto valor</span>
                     <?php endif; ?>
@@ -227,6 +258,8 @@ $jsonMeta = json_encode([
                       <?php if ($phoneLink): ?>
                         <a class="dropdown-item" href="<?= h($phoneLink) ?>" target="_blank">💬 Abrir WhatsApp</a>
                       <?php endif; ?>
+                      <div class="dropdown-divider"></div>
+                      <a class="dropdown-item text-danger" href="/pagamento/delete/<?= (int)$card['payment_id'] ?>" onclick="return confirm('Excluir esta cobrança?');">🗑️ Remover cobrança</a>
                     </div>
                   </div>
                 </div>
