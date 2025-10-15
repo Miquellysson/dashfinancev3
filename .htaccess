@@ -1,5 +1,9 @@
 RewriteEngine On
 
+# Garantir que /templates utilize o roteador PHP mesmo com diretório físico
+RewriteRule ^templates$ index.php?url=templates [QSA,L]
+RewriteRule ^templates/(.+)$ index.php?url=templates/$1 [QSA,L]
+
 # Se o arquivo ou diretório existir, serve diretamente
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
