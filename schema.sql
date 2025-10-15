@@ -241,6 +241,16 @@ CREATE TABLE IF NOT EXISTS templates_library (
 CREATE INDEX idx_templates_category ON templates_library (category);
 CREATE INDEX idx_templates_type ON templates_library (template_type);
 
+CREATE TABLE IF NOT EXISTS template_favorites (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT NOT NULL,
+  template_id INT NOT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_template_favorites_user_template (user_id, template_id),
+  CONSTRAINT fk_template_favorites_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  CONSTRAINT fk_template_favorites_template FOREIGN KEY (template_id) REFERENCES templates_library(id) ON DELETE CASCADE
+);
+
 -- Tabela de metas (para futuras implementações)
 CREATE TABLE IF NOT EXISTS goals (
   id INT AUTO_INCREMENT PRIMARY KEY,

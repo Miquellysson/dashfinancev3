@@ -10,6 +10,8 @@ if (!empty($activeFilters)) {
         }
     }
 }
+
+$currentUri = $_SERVER['REQUEST_URI'] ?? '/templates';
 ?>
 
 <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between mb-4">
@@ -84,75 +86,27 @@ if (!empty($activeFilters)) {
   </div>
 <?php endif; ?>
 
+<div class="card dashboard-card mb-4">
+  <div class="card-header d-flex align-items-center justify-content-between">
+    <h6 class="card-title mb-0">Meus templates salvos</h6>
+    <span class="badge badge-primary"><?= count($favorites ?? []) ?></span>
+  </div>
+  <div class="card-body">
+    <?php if (!empty($favorites)): ?>
+      <div class="row">
+        <?php foreach ($favorites as $favoriteTemplate): ?>
+          <?php $templateData = $favoriteTemplate; include __DIR__ . '/partials/template-card.php'; ?>
+        <?php endforeach; ?>
+      </div>
+    <?php else: ?>
+      <p class="text-muted mb-0">Você ainda não salvou templates nos favoritos. Clique na estrela de qualquer template para guardar aqui.</p>
+    <?php endif; ?>
+  </div>
+</div>
+
 <div class="row">
   <?php foreach ($templates as $template): ?>
-    <div class="col-xl-4 col-md-6 mb-4">
-      <div class="card dashboard-card h-100 d-flex flex-column">
-        <?php if (!empty($template['screenshot_path'])): ?>
-          <img src="<?= h($template['screenshot_path']) ?>" class="card-img-top" alt="<?= h($template['name']) ?>">
-        <?php else: ?>
-          <div class="card-img-top d-flex align-items-center justify-content-center" style="height:180px; background:#f1f5f9;">
-            <i class="fas fa-image fa-3x text-muted"></i>
-          </div>
-        <?php endif; ?>
-        <div class="card-body d-flex flex-column">
-          <div class="d-flex flex-wrap gap-1 mb-2">
-            <span class="badge badge-soft-secondary text-uppercase">
-              <?= h($categories[$template['category']] ?? ucfirst($template['category'])) ?>
-            </span>
-            <span class="badge badge-soft-primary text-uppercase">
-              <?= h($templateTypes[$template['template_type']] ?? ucfirst($template['template_type'])) ?>
-            </span>
-          </div>
-          <h5 class="card-title mb-2"><?= h($template['name']) ?></h5>
-          <p class="card-text text-muted flex-grow-1">
-            <?= h(mb_strimwidth($template['description'] ?? 'Sem descrição.', 0, 130, '...')) ?>
-          </p>
-          <?php
-            $keywordsList = [];
-            if (!empty($template['keywords'])) {
-              $keywordsList = array_filter(array_map('trim', explode(',', $template['keywords'])));
-            }
-          ?>
-          <?php if (!empty($keywordsList)): ?>
-            <p class="text-muted small mb-0">
-              <i class="fas fa-tags mr-1"></i>
-              <?php foreach ($keywordsList as $tag): ?>
-                <span class="badge badge-light mr-1"><?= h($tag) ?></span>
-              <?php endforeach; ?>
-            </p>
-          <?php endif; ?>
-          <?php if (!empty($template['source_path'])): ?>
-            <p class="text-muted small mt-1 mb-0">Fonte: <code>templates/<?= h($template['source_path']) ?></code></p>
-          <?php endif; ?>
-        </div>
-        <div class="card-footer d-flex flex-wrap justify-content-between align-items-center gap-2">
-          <div class="btn-group btn-group-sm" role="group">
-            <?php if (!empty($template['link'])): ?>
-              <a href="<?= h($template['link']) ?>" target="_blank" class="btn btn-outline-primary" data-toggle="tooltip" title="Visualizar">
-                <i class="fas fa-external-link-alt"></i>
-              </a>
-            <?php endif; ?>
-            <?php if (!empty($template['file_path'])): ?>
-              <a href="/templates/download/<?= (int)$template['id'] ?>" class="btn btn-outline-primary" data-toggle="tooltip" title="Download">
-                <i class="fas fa-download"></i>
-              </a>
-            <?php endif; ?>
-            <a href="/templates/use-template/<?= (int)$template['id'] ?>" class="btn btn-outline-success" data-toggle="tooltip" title="Usar Template">
-              <i class="fas fa-clone"></i>
-            </a>
-            <a href="/templates/edit/<?= (int)$template['id'] ?>" class="btn btn-outline-secondary" data-toggle="tooltip" title="Editar">
-              <i class="fas fa-edit"></i>
-            </a>
-            <form method="post" action="/templates/delete/<?= (int)$template['id'] ?>" onsubmit="return confirm('Deseja realmente excluir este template?')" style="display:inline;">
-              <button type="submit" class="btn btn-outline-danger" data-toggle="tooltip" title="Excluir">
-                <i class="fas fa-trash"></i>
-              </button>
-            </form>
-          </div>
-        </div>
-      </div>
-    </div>
+    <?php $templateData = $template; include __DIR__ . '/partials/template-card.php'; ?>
   <?php endforeach; ?>
 
   <?php if (empty($templates)): ?>

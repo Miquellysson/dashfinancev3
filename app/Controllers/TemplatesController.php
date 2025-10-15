@@ -47,9 +47,29 @@ class TemplatesController {
         ];
 
         $templates = $this->templates->search($filters);
+        $userId = (int)($_SESSION['user_id'] ?? 0);
+        $favoriteIds = [];
+        $favoriteTemplates = [];
+
+        if ($userId > 0) {
+            $favoriteIds = $this->templates->getFavoriteIds($userId);
+            $favoriteTemplates = $this->templates->listFavorites($userId);
+        }
+
+        foreach ($templates as &$item) {
+            $item['is_favorite'] = in_array((int)$item['id'], $favoriteIds, true);
+        }
+        unset($item);
+
+        foreach ($favoriteTemplates as &$favorite) {
+            $favorite['is_favorite'] = true;
+        }
+        unset($favorite);
+
         $categories = $this->categories;
         $templateTypes = $this->templateTypes;
         $activeFilters = $filters;
+        $favorites = $favoriteTemplates;
         $title = 'Templates';
 
         ob_start();
@@ -477,5 +497,47 @@ class TemplatesController {
         if (is_file($absolute)) {
             @unlink($absolute);
         }
+    }
+
+    public function toggleFavorite($id): void {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            Utils::redirect('/templates');
+        }
+
+        $userId = (int)($_SESSION['user_id'] ?? 0);
+        if ($userId <= 0) {
+            Utils::redirect('/auth/login');
+        }
+
+        $templateId = (int)$id;
+        $template = $this->templates->find($templateId);
+        if (!$template) {
+            Utils::redirect('/templates', 'Template não encontrado.');
+        }
+
+        $shouldFavorite = isset($_POST['favorite']) && (int)$_POST['favorite'] === 1;
+
+        if ($shouldFavorite) {
+            $this->templates->addFavorite($userId, $templateId);
+            $message = 'Template salvo em favoritos.';
+        } else {
+            $this->templates->removeFavorite($userId, $templateId);
+            $message = 'Template removido dos favoritos.';
+        }
+
+        $returnTo = $_POST['return_to'] ?? ($_SERVER['HTTP_REFERER'] ?? '/templates');
+        if (!is_string($returnTo)) {
+            $returnTo = '/templates';
+        } else {
+            $parsed = parse_url($returnTo);
+            $path = $parsed['path'] ?? '/templates';
+            $query = isset($parsed['query']) ? '?' . $parsed['query'] : '';
+            $returnTo = $path . $query;
+            if ($returnTo === '') {
+                $returnTo = '/templates';
+            }
+        }
+
+        Utils::redirect($returnTo, $message);
     }
 }

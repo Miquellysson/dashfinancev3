@@ -131,4 +131,49 @@ class TemplateModel {
         $stmt = $this->pdo->query("SELECT COUNT(*) FROM templates_library");
         return (int)$stmt->fetchColumn();
     }
+
+    public function listFavorites(int $userId): array {
+        $stmt = $this->pdo->prepare("
+            SELECT t.*, tf.created_at AS favorited_at
+            FROM template_favorites tf
+            INNER JOIN templates_library t ON t.id = tf.template_id
+            WHERE tf.user_id = :user_id
+            ORDER BY tf.created_at DESC
+        ");
+        $stmt->execute([':user_id' => $userId]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public function getFavoriteIds(int $userId): array {
+        $stmt = $this->pdo->prepare("
+            SELECT template_id
+            FROM template_favorites
+            WHERE user_id = :user_id
+        ");
+        $stmt->execute([':user_id' => $userId]);
+        return array_map('intval', $stmt->fetchAll(PDO::FETCH_COLUMN));
+    }
+
+    public function addFavorite(int $userId, int $templateId): bool {
+        $stmt = $this->pdo->prepare("
+            INSERT INTO template_favorites (user_id, template_id)
+            VALUES (:user_id, :template_id)
+            ON DUPLICATE KEY UPDATE created_at = created_at
+        ");
+        return $stmt->execute([
+            ':user_id' => $userId,
+            ':template_id' => $templateId,
+        ]);
+    }
+
+    public function removeFavorite(int $userId, int $templateId): bool {
+        $stmt = $this->pdo->prepare("
+            DELETE FROM template_favorites
+            WHERE user_id = :user_id AND template_id = :template_id
+        ");
+        return $stmt->execute([
+            ':user_id' => $userId,
+            ':template_id' => $templateId,
+        ]);
+    }
 }
