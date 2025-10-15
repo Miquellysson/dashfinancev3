@@ -21,19 +21,19 @@ body {
 
 /* Sidebar */
 .sidebar {
-    background: rgba(210, 235, 23, 0.95);
-    color: #141414;
+    background: #33311D;
+    color: #FFFFFF;
 }
 
 .sidebar .nav-item .nav-link,
 .sidebar .sidebar-brand {
-    color: #141414;
+    color: #FFFFFF;
 }
 
 .sidebar .nav-item .nav-link:hover,
 .sidebar .nav-item.active .nav-link {
-    color: #0A0316;
-    background-color: rgba(10, 3, 22, 0.12);
+    color: #33311D;
+    background-color: rgba(210, 235, 23, 0.12);
 }
 
 .sidebar .sidebar-brand {

@@ -27,7 +27,7 @@ SET time_zone = "+00:00";
 -- Estrutura para tabela `billing_cases`
 --
 
-CREATE TABLE `billing_cases` (
+CREATE TABLE IF NOT EXISTS `billing_cases` (
   `id` int(11) NOT NULL,
   `client_id` int(11) NOT NULL,
   `responsavel_id` int(11) DEFAULT NULL,
@@ -50,7 +50,7 @@ CREATE TABLE `billing_cases` (
 --
 
 INSERT INTO `billing_cases` (`id`, `client_id`, `responsavel_id`, `origem`, `origem_id`, `titulo`, `valor_total`, `valor_pendente`, `status`, `prioridade`, `proxima_acao_em`, `encerrado_em`, `observacoes`, `created_at`, `updated_at`) VALUES
-(1, 18, 2, 'payment', NULL, 'cobrança', 0.00, 0.00, 'aberto', 'alta', '2026-12-12 18:59:00', '0000-00-00 00:00:00', '1212', '2025-10-11 07:54:32', '2025-10-11 07:54:32'),
+(1, 18, 2, 'payment', NULL, 'cobrança', 0.00, 0.00, 'aberto', 'alta', '2026-12-12 18:59:00', NULL, '1212', '2025-10-11 07:54:32', '2025-10-11 07:54:32'),
 (2, 14, 1, 'manual', NULL, 'ssdsd', 0.00, 0.00, 'aberto', 'baixa', '2025-10-08 06:22:00', '2025-10-23 06:23:00', 'dsdsd', '2025-10-11 09:23:04', '2025-10-11 09:23:04');
 
 -- --------------------------------------------------------
@@ -59,7 +59,7 @@ INSERT INTO `billing_cases` (`id`, `client_id`, `responsavel_id`, `origem`, `ori
 -- Estrutura para tabela `billing_tasks`
 --
 
-CREATE TABLE `billing_tasks` (
+CREATE TABLE IF NOT EXISTS `billing_tasks` (
   `id` int(11) NOT NULL,
   `case_id` int(11) NOT NULL,
   `responsavel_id` int(11) DEFAULT NULL,
@@ -80,7 +80,7 @@ CREATE TABLE `billing_tasks` (
 -- Estrutura para tabela `clients`
 --
 
-CREATE TABLE `clients` (
+CREATE TABLE IF NOT EXISTS `clients` (
   `id` int(11) NOT NULL,
   `name` varchar(150) NOT NULL,
   `email` varchar(150) DEFAULT NULL,
@@ -124,7 +124,7 @@ INSERT INTO `clients` (`id`, `name`, `email`, `phone`, `entry_date`, `notes`, `c
 -- Estrutura para tabela `collection_cards`
 --
 
-CREATE TABLE `collection_cards` (
+CREATE TABLE IF NOT EXISTS `collection_cards` (
   `id` int(11) NOT NULL,
   `payment_id` int(11) NOT NULL,
   `manual_status` enum('a_vencer','vencendo','vencido','em_cobranca','perdido') DEFAULT NULL,
@@ -154,7 +154,7 @@ INSERT INTO `collection_cards` (`id`, `payment_id`, `manual_status`, `status_sin
 -- Estrutura para tabela `collection_contacts`
 --
 
-CREATE TABLE `collection_contacts` (
+CREATE TABLE IF NOT EXISTS `collection_contacts` (
   `id` int(11) NOT NULL,
   `card_id` int(11) NOT NULL,
   `payment_id` int(11) NOT NULL,
@@ -191,7 +191,7 @@ INSERT INTO `collection_contacts` (`id`, `card_id`, `payment_id`, `contact_type`
 -- Estrutura para tabela `collection_movements`
 --
 
-CREATE TABLE `collection_movements` (
+CREATE TABLE IF NOT EXISTS `collection_movements` (
   `id` int(11) NOT NULL,
   `card_id` int(11) NOT NULL,
   `payment_id` int(11) NOT NULL,
@@ -228,13 +228,15 @@ INSERT INTO `collection_movements` (`id`, `card_id`, `payment_id`, `from_status`
 -- Estrutura para tabela `financial_reserve_entries`
 --
 
-CREATE TABLE `financial_reserve_entries` (
+CREATE TABLE IF NOT EXISTS `financial_reserve_entries` (
   `id` int(11) NOT NULL,
-  `entry_type` enum('deposit','withdraw') NOT NULL,
+  `operation_type` enum('deposit','withdraw') NOT NULL,
   `amount` decimal(12,2) NOT NULL,
-  `occurred_at` datetime NOT NULL,
-  `note` text DEFAULT NULL,
-  `user_id` int(11) DEFAULT NULL,
+  `reference_date` date NOT NULL,
+  `description` varchar(180) DEFAULT NULL,
+  `category` varchar(120) DEFAULT NULL,
+  `notes` text DEFAULT NULL,
+  `created_by` int(11) DEFAULT NULL,
   `created_at` datetime NOT NULL DEFAULT current_timestamp(),
   `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
   `deleted_at` datetime DEFAULT NULL
@@ -246,7 +248,7 @@ CREATE TABLE `financial_reserve_entries` (
 -- Estrutura para tabela `goals`
 --
 
-CREATE TABLE `goals` (
+CREATE TABLE IF NOT EXISTS `goals` (
   `id` int(11) NOT NULL,
   `period_type` enum('daily','weekly','biweekly','monthly','quarterly') NOT NULL DEFAULT 'monthly',
   `period_start` date NOT NULL,
@@ -273,7 +275,7 @@ INSERT INTO `goals` (`id`, `period_type`, `period_start`, `period_end`, `target_
 -- Estrutura para tabela `notifications`
 --
 
-CREATE TABLE `notifications` (
+CREATE TABLE IF NOT EXISTS `notifications` (
   `id` bigint(20) NOT NULL,
   `user_id` int(11) NOT NULL,
   `resource_type` varchar(50) NOT NULL,
@@ -300,9 +302,9 @@ INSERT INTO `notifications` (`id`, `user_id`, `resource_type`, `resource_id`, `t
 -- Estrutura para tabela `payments`
 --
 
-CREATE TABLE `payments` (
+CREATE TABLE IF NOT EXISTS `payments` (
   `id` int(11) NOT NULL,
-  `project_id` int(11) NOT NULL,
+  `project_id` int(11) DEFAULT NULL,
   `client_id` int(11) DEFAULT NULL,
   `kind` enum('one_time','recurring') NOT NULL DEFAULT 'one_time',
   `transaction_type` enum('receita','despesa') NOT NULL DEFAULT 'receita',
@@ -325,8 +327,8 @@ CREATE TABLE `payments` (
 INSERT INTO `payments` (`id`, `project_id`, `client_id`, `kind`, `transaction_type`, `description`, `category`, `notes`, `amount`, `currency`, `due_date`, `paid_at`, `status_id`, `created_at`, `updated_at`) VALUES
 (1, 1, NULL, 'one_time', 'receita', NULL, NULL, NULL, 1650.00, 'BRL', NULL, '2025-09-14', 1, '2025-09-25 00:26:29', '2025-09-25 13:34:15'),
 (2, 10, NULL, 'one_time', 'receita', NULL, NULL, NULL, 700.00, 'BRL', NULL, '2025-09-23', 1, '2025-09-25 13:52:20', '2025-09-25 13:53:07'),
-(3, 10, NULL, 'one_time', 'receita', NULL, NULL, NULL, 700.00, 'BRL', '2025-10-08', '0000-00-00', 1, '2025-09-25 13:54:43', '2025-10-15 01:29:57'),
-(4, 16, NULL, 'one_time', 'receita', 'ssdsadasd', 'dasdsad', NULL, 124.00, 'BRL', '2025-10-16', '0000-00-00', 5, '2025-10-15 01:29:25', '2025-10-15 01:29:25'),
+(3, 10, NULL, 'one_time', 'receita', NULL, NULL, NULL, 700.00, 'BRL', '2025-10-08', NULL, 1, '2025-09-25 13:54:43', '2025-10-15 01:29:57'),
+(4, 16, NULL, 'one_time', 'receita', 'ssdsadasd', 'dasdsad', NULL, 124.00, 'BRL', '2025-10-16', NULL, 5, '2025-10-15 01:29:25', '2025-10-15 01:29:25'),
 (5, 17, 16, 'one_time', 'receita', 'devedor', 'Site', NULL, 12.00, 'BRL', '2025-10-13', NULL, 13, '2025-10-15 03:22:35', '2025-10-15 03:23:51');
 
 -- --------------------------------------------------------
@@ -335,9 +337,9 @@ INSERT INTO `payments` (`id`, `project_id`, `client_id`, `kind`, `transaction_ty
 -- Estrutura para tabela `projects`
 --
 
-CREATE TABLE `projects` (
+CREATE TABLE IF NOT EXISTS `projects` (
   `id` int(11) NOT NULL,
-  `client_id` int(11) NOT NULL,
+  `client_id` int(11) DEFAULT NULL,
   `nome_cliente` varchar(255) NOT NULL DEFAULT '',
   `data_entrada` datetime NOT NULL DEFAULT current_timestamp(),
   `name` varchar(150) NOT NULL,
@@ -394,7 +396,7 @@ INSERT INTO `projects` (`id`, `client_id`, `nome_cliente`, `data_entrada`, `name
 -- Estrutura para tabela `project_activities`
 --
 
-CREATE TABLE `project_activities` (
+CREATE TABLE IF NOT EXISTS `project_activities` (
   `id` int(11) NOT NULL,
   `projeto_id` int(11) NOT NULL,
   `titulo_atividade` varchar(255) NOT NULL,
@@ -417,7 +419,7 @@ CREATE TABLE `project_activities` (
 -- Estrutura para tabela `rate_limits`
 --
 
-CREATE TABLE `rate_limits` (
+CREATE TABLE IF NOT EXISTS `rate_limits` (
   `id` int(11) NOT NULL,
   `ip` varchar(45) NOT NULL,
   `rota` varchar(120) NOT NULL,
@@ -439,7 +441,7 @@ INSERT INTO `rate_limits` (`id`, `ip`, `rota`, `tentativas`, `primeiro_registro`
 -- Estrutura para tabela `status_catalog`
 --
 
-CREATE TABLE `status_catalog` (
+CREATE TABLE IF NOT EXISTS `status_catalog` (
   `id` int(11) NOT NULL,
   `name` varchar(80) NOT NULL,
   `color_hex` char(7) NOT NULL DEFAULT '#6b7280',
@@ -474,7 +476,7 @@ INSERT INTO `status_catalog` (`id`, `name`, `color_hex`, `sort_order`, `created_
 -- Estrutura para tabela `templates_library`
 --
 
-CREATE TABLE `templates_library` (
+CREATE TABLE IF NOT EXISTS `templates_library` (
   `id` int(11) NOT NULL,
   `name` varchar(150) NOT NULL,
   `category` varchar(50) NOT NULL,
@@ -498,7 +500,7 @@ CREATE TABLE `templates_library` (
 -- Estrutura para tabela `users`
 --
 
-CREATE TABLE `users` (
+CREATE TABLE IF NOT EXISTS `users` (
   `id` int(11) NOT NULL,
   `nome_completo` varchar(255) NOT NULL,
   `email` varchar(150) NOT NULL,
@@ -533,7 +535,7 @@ INSERT INTO `users` (`id`, `nome_completo`, `email`, `telefone`, `cargo`, `foto_
 -- Estrutura para tabela `user_audit_logs`
 --
 
-CREATE TABLE `user_audit_logs` (
+CREATE TABLE IF NOT EXISTS `user_audit_logs` (
   `id` int(11) NOT NULL,
   `usuario_id` int(11) NOT NULL,
   `acao` enum('create','update','delete','login','logout','password_reset','status_change','role_change') NOT NULL,
@@ -559,7 +561,7 @@ INSERT INTO `user_audit_logs` (`id`, `usuario_id`, `acao`, `detalhes`, `ip`, `us
 -- Estrutura para tabela `user_sessions`
 --
 
-CREATE TABLE `user_sessions` (
+CREATE TABLE IF NOT EXISTS `user_sessions` (
   `id` int(11) NOT NULL,
   `usuario_id` int(11) NOT NULL,
   `session_id` varchar(191) NOT NULL,
@@ -630,9 +632,9 @@ ALTER TABLE `collection_movements`
 --
 ALTER TABLE `financial_reserve_entries`
   ADD PRIMARY KEY (`id`),
-  ADD KEY `user_id` (`user_id`),
-  ADD KEY `idx_financial_reserve_occurred` (`occurred_at`),
-  ADD KEY `idx_financial_reserve_type` (`entry_type`);
+  ADD KEY `idx_financial_reserve_type` (`operation_type`),
+  ADD KEY `idx_financial_reserve_date` (`reference_date`),
+  ADD KEY `fk_financial_reserve_created_by` (`created_by`);
 
 --
 -- Índices de tabela `goals`
@@ -885,7 +887,7 @@ ALTER TABLE `collection_movements`
 -- Restrições para tabelas `financial_reserve_entries`
 --
 ALTER TABLE `financial_reserve_entries`
-  ADD CONSTRAINT `financial_reserve_entries_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE SET NULL;
+  ADD CONSTRAINT `fk_financial_reserve_created_by` FOREIGN KEY (`created_by`) REFERENCES `users` (`id`) ON DELETE SET NULL;
 
 --
 -- Restrições para tabelas `notifications`
@@ -898,14 +900,14 @@ ALTER TABLE `notifications`
 --
 ALTER TABLE `payments`
   ADD CONSTRAINT `fk_payments_clients` FOREIGN KEY (`client_id`) REFERENCES `clients` (`id`) ON DELETE SET NULL,
-  ADD CONSTRAINT `fk_payments_project` FOREIGN KEY (`project_id`) REFERENCES `projects` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `fk_payments_project` FOREIGN KEY (`project_id`) REFERENCES `projects` (`id`) ON DELETE SET NULL,
   ADD CONSTRAINT `fk_payments_status` FOREIGN KEY (`status_id`) REFERENCES `status_catalog` (`id`) ON DELETE SET NULL;
 
 --
 -- Restrições para tabelas `projects`
 --
 ALTER TABLE `projects`
-  ADD CONSTRAINT `fk_projects_client` FOREIGN KEY (`client_id`) REFERENCES `clients` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `fk_projects_client` FOREIGN KEY (`client_id`) REFERENCES `clients` (`id`) ON DELETE SET NULL,
   ADD CONSTRAINT `fk_projects_status` FOREIGN KEY (`status_id`) REFERENCES `status_catalog` (`id`) ON DELETE SET NULL,
   ADD CONSTRAINT `fk_projects_usuario_responsavel` FOREIGN KEY (`usuario_responsavel_id`) REFERENCES `users` (`id`) ON DELETE SET NULL;
 
