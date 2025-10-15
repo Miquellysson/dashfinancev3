@@ -49,15 +49,9 @@ $jsonMeta = json_encode([
     <h1 class="h3 mb-2">Gestão de Cobranças</h1>
     <p class="text-muted mb-0">Acompanhe e gerencie todas as cobranças pendentes</p>
   </div>
-  <div class="d-flex flex-column flex-lg-row align-items-lg-center">
-    <div class="kanban-alert badge badge-pill badge-warning mb-2 mb-lg-0 mr-lg-3">
-      <span class="mr-2">🔔</span>
-      <span><strong><?= $dueTodayCount ?></strong> vencendo hoje</span>
-    </div>
-    <div class="kanban-view-toggle btn-group" role="group" aria-label="Alternar visualização">
-      <a href="/cobranca" class="btn btn-sm btn-primary active" data-view="kanban">Quadro</a>
-      <a href="/cobranca?modo=legacy" class="btn btn-sm btn-outline-primary" data-view="lista">Lista</a>
-    </div>
+  <div class="kanban-alert badge badge-pill badge-warning mb-2 mb-lg-0">
+    <span class="mr-2">🔔</span>
+    <span><strong><?= $dueTodayCount ?></strong> vencendo hoje</span>
   </div>
 </div>
 
@@ -171,7 +165,7 @@ $jsonMeta = json_encode([
       <div class="kanban-column-header" style="<?= $headerStyle ?>">
         <div class="kanban-column-header-top d-flex align-items-center justify-content-between">
           <div class="kanban-column-title mb-0"><?= h($meta['title']) ?></div>
-          <button class="btn btn-sm btn-light kanban-add-card" type="button" data-status="<?= h($status) ?>" data-add-url="/pagamento/create?status=<?= h($status) ?>">
+          <button class="btn btn-sm btn-light kanban-add-card" type="button" data-status="<?= h($status) ?>">
             <i class="fas fa-plus mr-1"></i>Nova cobrança
           </button>
         </div>
@@ -219,11 +213,19 @@ $jsonMeta = json_encode([
             <div class="<?= implode(' ', $cardClasses) ?>" data-payment-id="<?= (int)$card['payment_id'] ?>"
                  data-status="<?= h($status) ?>"
                  data-client-name="<?= h($card['client_name']) ?>"
+                 data-client-id="<?= h($card['client_id'] ?? '') ?>"
+                 data-client-email="<?= h($card['client_email'] ?? '') ?>"
+                 data-client-phone="<?= h($phoneDisplay) ?>"
                  data-project-name="<?= h($card['project_name'] ?? $card['description'] ?? '') ?>"
+                 data-project-id="<?= h($card['project_id'] ?? '') ?>"
                  data-amount="<?= h(number_format($card['amount'], 2, '.', '')) ?>"
                  data-amount-formatted="<?= h($card['amount_formatted']) ?>"
+                 data-currency="<?= h($card['currency'] ?? 'BRL') ?>"
                  data-due-date="<?= h($card['due_date'] ?? '') ?>"
                  data-days-overdue="<?= $daysOverdue ?>"
+                 data-description="<?= h($card['description'] ?? '') ?>"
+                 data-category="<?= h($card['category'] ?? '') ?>"
+                 data-notes="<?= h($card['notes'] ?? '') ?>"
                  data-whatsapp="<?= h($phoneLink) ?>"
                  data-last-contact="<?= h($card['last_contact_at'] ?? '') ?>"
                  data-last-channel="<?= h($card['last_contact_channel'] ?? '') ?>"

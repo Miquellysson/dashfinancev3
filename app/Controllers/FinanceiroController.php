@@ -34,11 +34,12 @@ class FinanceiroController {
 
         $stmt = $this->pdo->prepare("
             SELECT
-              transaction_type,
+              COALESCE(transaction_type, 'receita') AS transaction_type,
               COALESCE(SUM(CASE WHEN paid_at BETWEEN :start AND :end THEN amount END), 0) AS paid_total,
               COALESCE(SUM(CASE WHEN due_date BETWEEN :start AND :end AND (paid_at IS NULL OR paid_at = '0000-00-00') THEN amount END), 0) AS scheduled_total
             FROM payments
             WHERE (currency = 'BRL' OR currency IS NULL)
+            GROUP BY COALESCE(transaction_type, 'receita')
         ");
         $stmt->bindValue(':start', $monthStart);
         $stmt->bindValue(':end', $monthEnd);

@@ -36,9 +36,6 @@ class CobrancaController {
     }
 
     public function index() {
-        if ($this->isLegacyRequested()) {
-            return $this->legacyIndex();
-        }
         return $this->boardView();
     }
 
@@ -76,31 +73,6 @@ class CobrancaController {
         $title = 'Gestão de Cobranças';
         ob_start();
         include __DIR__ . '/../Views/cobranca/kanban.php';
-        $content = ob_get_clean();
-        include __DIR__ . '/../Views/layout.php';
-    }
-
-    private function isLegacyRequested(): bool {
-        return isset($_GET['modo']) && $_GET['modo'] === 'legacy';
-    }
-
-    private function legacyIndex(): void {
-        $filters = [
-            'status' => $_GET['status'] ?? null,
-            'responsavel_id' => $_GET['responsavel_id'] ?? null,
-            'cliente' => $_GET['cliente'] ?? null,
-        ];
-        $page = max(1, (int)($_GET['page'] ?? 1));
-        $limit = 20;
-        $offset = ($page - 1) * $limit;
-
-        $cases = $this->cases->list($filters, $limit, $offset);
-        $clients = $this->clients->getAll(200, 0);
-        $responsaveis = $this->users->listActive();
-
-        $title = 'Cobranças (legado)';
-        ob_start();
-        include __DIR__ . '/../Views/cobranca/index.php';
         $content = ob_get_clean();
         include __DIR__ . '/../Views/layout.php';
     }
