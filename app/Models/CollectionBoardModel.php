@@ -4,6 +4,13 @@ class CollectionBoardModel {
     private PDO $pdo;
 
     private const BOARD_COLUMNS = ['a_vencer','vencendo','vencido','em_cobranca','perdido'];
+    private const BOARD_STATUS_TO_FINANCE = [
+        'a_vencer' => 'A Receber',
+        'vencendo' => 'Pendente',
+        'vencido' => 'Em Atraso',
+        'em_cobranca' => 'Em Cobrança',
+        'perdido' => 'Perdido',
+    ];
 
     public function __construct(PDO $pdo) {
         $this->pdo = $pdo;
@@ -331,7 +338,7 @@ class CollectionBoardModel {
         $params = [];
 
         if (!empty($filters['client'])) {
-            $conditions[] = 'c.name LIKE :client';
+            $conditions[] = '(cli_direct.name LIKE :client OR cli_project.name LIKE :client)';
             $params[':client'] = '%' . $filters['client'] . '%';
         }
 
@@ -387,6 +394,7 @@ class CollectionBoardModel {
             SELECT
                 p.id AS payment_id,
                 p.project_id,
+                p.client_id AS direct_client_id,
                 p.kind,
                 COALESCE(p.transaction_type, 'receita') AS transaction_type,
                 p.description,
@@ -396,15 +404,17 @@ class CollectionBoardModel {
                 p.due_date,
                 p.paid_at,
                 p.status_id,
+                p.notes,
                 p.created_at AS payment_created_at,
                 p.updated_at AS payment_updated_at,
                 s.name AS status_name,
                 pr.name AS project_name,
                 pr.usuario_responsavel_id,
-                pr.client_id,
-                c.name AS client_name,
-                c.email AS client_email,
-                c.phone AS client_phone,
+                pr.client_id AS project_client_id,
+                COALESCE(cli_direct.id, cli_project.id) AS client_id,
+                COALESCE(cli_direct.name, cli_project.name) AS client_name,
+                COALESCE(cli_direct.email, cli_project.email) AS client_email,
+                COALESCE(cli_direct.phone, cli_project.phone) AS client_phone,
                 card.id AS card_id,
                 card.manual_status,
                 card.status_since,
@@ -417,7 +427,8 @@ class CollectionBoardModel {
                 card.updated_at AS card_updated_at
             FROM payments p
             LEFT JOIN projects pr ON pr.id = p.project_id
-            LEFT JOIN clients c ON c.id = pr.client_id
+            LEFT JOIN clients cli_project ON cli_project.id = pr.client_id
+            LEFT JOIN clients cli_direct ON cli_direct.id = p.client_id
             LEFT JOIN status_catalog s ON s.id = p.status_id
             LEFT JOIN collection_cards card ON card.payment_id = p.id
             WHERE COALESCE(p.transaction_type, 'receita') = 'receita'
@@ -476,8 +487,8 @@ class CollectionBoardModel {
 
         return [
             'payment_id' => (int)$row['payment_id'],
-            'project_id' => (int)($row['project_id'] ?? 0),
-            'client_id' => (int)($row['client_id'] ?? 0),
+            'project_id' => !empty($row['project_id']) ? (int)$row['project_id'] : null,
+            'client_id' => !empty($row['client_id']) ? (int)$row['client_id'] : null,
             'status' => $status,
             'amount' => $amount,
             'amount_formatted' => Utils::formatMoney($amount),
@@ -488,6 +499,8 @@ class CollectionBoardModel {
             'whatsapp_link' => $whatsAppLink,
             'project_name' => $row['project_name'] ?? null,
             'description' => $row['description'] ?? null,
+            'category' => $row['category'] ?? null,
+            'notes' => $row['notes'] ?? null,
             'due_date' => $dueDateRaw,
             'due_date_formatted' => $dueDate ? $dueDate->format('d/m/Y') : null,
             'days_until_due' => $daysUntilDue,
@@ -522,6 +535,7 @@ class CollectionBoardModel {
         }
 
         $this->upsertCardFields((int)$cardRow['id'], $paymentId, $fields);
+        $this->syncFinanceStatus($paymentId, $targetStatus);
     }
 
     private function touchLastContact(int $cardId, string $contactDate, string $channel, ?string $notes, int $userId): void {
@@ -541,6 +555,56 @@ class CollectionBoardModel {
             ':user_id' => $userId,
             ':card_id' => $cardId,
         ]);
+    }
+
+    private function syncFinanceStatus(int $paymentId, string $boardStatus): void {
+        $statusName = self::BOARD_STATUS_TO_FINANCE[$boardStatus] ?? null;
+        if (!$statusName) {
+            return;
+        }
+        $statusId = $this->ensureStatusCatalog($statusName);
+        $stmt = $this->pdo->prepare("
+            UPDATE payments
+            SET status_id = :status_id,
+                updated_at = NOW()
+            WHERE id = :payment_id
+        ");
+        $stmt->execute([
+            ':status_id' => $statusId,
+            ':payment_id' => $paymentId,
+        ]);
+    }
+
+    private function ensureStatusCatalog(string $name): int {
+        $stmt = $this->pdo->prepare("SELECT id FROM status_catalog WHERE name = :name LIMIT 1");
+        $stmt->execute([':name' => $name]);
+        $existing = $stmt->fetchColumn();
+        if ($existing) {
+            return (int)$existing;
+        }
+
+        $sortOrder = (int)$this->pdo->query("SELECT COALESCE(MAX(sort_order), 0) FROM status_catalog")->fetchColumn() + 1;
+        $insert = $this->pdo->prepare("
+            INSERT INTO status_catalog (name, color_hex, sort_order, created_at, updated_at)
+            VALUES (:name, :color, :sort_order, NOW(), NOW())
+        ");
+        $insert->execute([
+            ':name' => $name,
+            ':color' => $this->suggestStatusColor($name),
+            ':sort_order' => $sortOrder,
+        ]);
+        return (int)$this->pdo->lastInsertId();
+    }
+
+    private function suggestStatusColor(string $name): string {
+        $map = [
+            'A Receber' => '#10B981',
+            'Pendente' => '#F59E0B',
+            'Em Atraso' => '#EF4444',
+            'Em Cobrança' => '#F97316',
+            'Perdido' => '#6B7280',
+        ];
+        return $map[$name] ?? '#2563EB';
     }
 
     private function upsertCardFields(int $cardId, int $paymentId, array $fields): void {

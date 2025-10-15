@@ -32,8 +32,20 @@ CREATE TABLE IF NOT EXISTS clients (
   email VARCHAR(120),
   phone VARCHAR(20),
   address TEXT,
+  entry_date DATE NULL,
+  notes TEXT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS status_catalog (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(80) NOT NULL,
+  color_hex CHAR(7) NOT NULL DEFAULT '#6b7280',
+  sort_order INT NOT NULL DEFAULT 1,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY uk_status_catalog_name (name)
 );
 
 CREATE TABLE IF NOT EXISTS projects (
@@ -67,19 +79,79 @@ CREATE INDEX idx_projects_tipo_servico ON projects (tipo_servico);
 CREATE TABLE IF NOT EXISTS payments (
   id INT AUTO_INCREMENT PRIMARY KEY,
   project_id INT,
+  client_id INT NULL,
   kind ENUM('one_time','recurring') DEFAULT 'one_time',
   amount DECIMAL(12,2) NOT NULL,
   currency CHAR(3) NOT NULL DEFAULT 'BRL',
   transaction_type ENUM('receita','despesa') NOT NULL DEFAULT 'receita',
   description VARCHAR(255) NULL,
   category VARCHAR(120) NULL,
+  notes TEXT NULL,
   due_date DATE NULL,
   paid_at DATE NULL,
   status_id INT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE SET NULL,
+  FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE SET NULL,
   FOREIGN KEY (status_id) REFERENCES status_catalog(id) ON DELETE SET NULL
+);
+
+CREATE TABLE IF NOT EXISTS collection_cards (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  payment_id INT NOT NULL,
+  manual_status ENUM('a_vencer','vencendo','vencido','em_cobranca','perdido') DEFAULT NULL,
+  status_since DATETIME DEFAULT NULL,
+  last_contact_at DATETIME DEFAULT NULL,
+  last_contact_channel ENUM('email','whatsapp','sms','ligacao','outro') DEFAULT NULL,
+  last_contact_notes VARCHAR(255) DEFAULT NULL,
+  lost_reason ENUM('cliente_nao_responde','cliente_recusa','empresa_fechou','valor_nao_compensa','outros') DEFAULT NULL,
+  lost_details TEXT DEFAULT NULL,
+  lost_at DATETIME DEFAULT NULL,
+  created_by INT DEFAULT NULL,
+  updated_by INT DEFAULT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY uniq_collection_cards_payment (payment_id),
+  CONSTRAINT fk_collection_card_payment FOREIGN KEY (payment_id) REFERENCES payments(id) ON DELETE CASCADE,
+  CONSTRAINT fk_collection_card_created_by FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL,
+  CONSTRAINT fk_collection_card_updated_by FOREIGN KEY (updated_by) REFERENCES users(id) ON DELETE SET NULL
+);
+
+CREATE TABLE IF NOT EXISTS collection_movements (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  card_id INT NOT NULL,
+  payment_id INT NOT NULL,
+  from_status ENUM('a_vencer','vencendo','vencido','em_cobranca','perdido') DEFAULT NULL,
+  to_status ENUM('a_vencer','vencendo','vencido','em_cobranca','perdido') NOT NULL,
+  reason_code VARCHAR(60) DEFAULT NULL,
+  notes TEXT DEFAULT NULL,
+  created_by INT DEFAULT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT fk_collection_move_card FOREIGN KEY (card_id) REFERENCES collection_cards(id) ON DELETE CASCADE,
+  CONSTRAINT fk_collection_move_payment FOREIGN KEY (payment_id) REFERENCES payments(id) ON DELETE CASCADE,
+  CONSTRAINT fk_collection_move_user FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL,
+  INDEX idx_collection_movements_payment (payment_id),
+  INDEX idx_collection_movements_created_at (created_at)
+);
+
+CREATE TABLE IF NOT EXISTS collection_contacts (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  card_id INT NOT NULL,
+  payment_id INT NOT NULL,
+  contact_type ENUM('email','whatsapp','sms','ligacao','outro') NOT NULL,
+  contacted_at DATETIME NOT NULL,
+  client_response VARCHAR(255) DEFAULT NULL,
+  expected_payment_at DATE DEFAULT NULL,
+  notes TEXT DEFAULT NULL,
+  is_reminder TINYINT(1) NOT NULL DEFAULT 0,
+  created_by INT DEFAULT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT fk_collection_contact_card FOREIGN KEY (card_id) REFERENCES collection_cards(id) ON DELETE CASCADE,
+  CONSTRAINT fk_collection_contact_payment FOREIGN KEY (payment_id) REFERENCES payments(id) ON DELETE CASCADE,
+  CONSTRAINT fk_collection_contact_user FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL,
+  INDEX idx_collection_contacts_payment (payment_id),
+  INDEX idx_collection_contacts_contacted_at (contacted_at)
 );
 
 CREATE TABLE IF NOT EXISTS financial_reserve_entries (
@@ -191,6 +263,23 @@ VALUES
 ('Gerente', 'gerente@arkaleads.com', '$2y$10$M0QJtDReuMXfslWGVdJ8O.OlM5qjeoN5NPgmK8p2upLir0EZJzvhO', 'Gerente')
 ON DUPLICATE KEY UPDATE nome_completo=VALUES(nome_completo);
 
+INSERT INTO status_catalog (name, color_hex, sort_order) VALUES
+('Recebido', '#1cc88a', 1),
+('Pago', '#1cc88a', 2),
+('A Receber', '#f6c23e', 3),
+('Pendente', '#f6c23e', 4),
+('Em Atraso', '#e74a3b', 5),
+('Vencido', '#e74a3b', 6),
+('Parcelado', '#4e73df', 7),
+('Cancelado', '#858796', 8),
+('Pending', '#f6c23e', 9),
+('Paid', '#1cc88a', 10),
+('Overdue', '#e74a3b', 11),
+('Dropped', '#858796', 12),
+('Em Cobrança', '#f97316', 13),
+('Perdido', '#6B7280', 14)
+ON DUPLICATE KEY UPDATE color_hex=VALUES(color_hex), sort_order=VALUES(sort_order);
+
 -- Dados de exemplo (opcional)
 INSERT INTO clients (name, email, phone, address) VALUES
 ('Empresa ABC Ltda', 'contato@empresaabc.com', '(11) 99999-9999', 'Rua das Flores, 123 - São Paulo/SP'),
@@ -207,11 +296,3 @@ INSERT INTO projects (
 (2, 'João Silva', 'Sistema de Vendas', '2024-02-01 10:30:00', 'Consultoria', 'Satisfeito', 'ativo', 8000.00, 'Pendente', 0.00, 8000.00, 'Implantação de CRM e automações'),
 (3, 'Maria Santos', 'App Mobile Delivery', '2024-03-01 14:00:00', 'Desenvolvimento Web', 'Parcialmente Satisfeito', 'pausado', 12000.00, 'Cancelado', 6000.00, 6000.00, 'Projeto pausado aguardando orçamento adicional')
 ON DUPLICATE KEY UPDATE name=VALUES(name);
-
-INSERT INTO payments (project_id, amount, date, description, status) VALUES
-(1, 2500.00, '2024-01-20', 'Pagamento inicial - 50%', 'pago'),
-(1, 2500.00, '2024-02-15', 'Pagamento final - 50%', 'pendente'),
-(2, 4000.00, '2024-02-10', 'Primeira parcela', 'pago'),
-(2, 4000.00, '2024-03-10', 'Segunda parcela', 'pendente'),
-(3, 6000.00, '2024-03-15', 'Entrada do projeto', 'pago')
-ON DUPLICATE KEY UPDATE amount=VALUES(amount);

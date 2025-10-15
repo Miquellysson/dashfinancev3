@@ -93,6 +93,7 @@
       this.columns = new Map();
       this.dragManager = null;
       this.unsubscribe = null;
+       this.cardForm = null;
       this.handleClick = this.handleClick.bind(this);
       this.handleTemplateChange = this.handleTemplateChange.bind(this);
     }
@@ -106,6 +107,7 @@
       this.unsubscribe = this.store.subscribe((state) => this.render(state));
       prepareReminderPreview();
       this.refreshEmptyStates();
+      this.cardForm = new CardFormManager(this);
     }
 
     cacheSummaryEls() {
@@ -243,8 +245,34 @@
       const addBtn = event.target.closest('.kanban-add-card');
       if (addBtn) {
         event.preventDefault();
-        const url = addBtn.dataset.addUrl || '/pagamento/create';
-        window.location.href = url;
+        if (this.cardForm) {
+          this.cardForm.openCreate(addBtn.dataset.status || 'a_vencer');
+        }
+        return;
+      }
+
+      const editBtn = event.target.closest('.js-edit-card');
+      if (editBtn) {
+        event.preventDefault();
+        if (this.cardForm) {
+          this.cardForm.openEdit(editBtn.closest('.kanban-card'));
+        }
+        return;
+      }
+
+      const deleteBtn = event.target.closest('.js-delete-card');
+      if (deleteBtn) {
+        event.preventDefault();
+        const cardEl = deleteBtn.closest('.kanban-card');
+        const paymentId = deleteBtn.dataset.paymentId || (cardEl && cardEl.dataset.paymentId);
+        if (!paymentId) {
+          return;
+        }
+        const clientLabel = cardEl ? (cardEl.dataset.clientName || 'esta cobrança') : 'esta cobrança';
+        if (!window.confirm(`Remover ${clientLabel}?`)) {
+          return;
+        }
+        this.deleteCard(paymentId);
         return;
       }
 
@@ -366,6 +394,20 @@
       }
     }
 
+    async deleteCard(paymentId) {
+      if (!paymentId) {
+        showToast('Cobrança inválida.', 'danger');
+        return;
+      }
+      try {
+        await requestJSON(`${this.endpoints.card}/${paymentId}`, 'DELETE');
+        showToast('Cobrança removida.', 'success');
+        await this.refreshBoard(false);
+      } catch (error) {
+        showToast(error.message || 'Não foi possível remover a cobrança.', 'danger');
+      }
+    }
+
     async refreshBoard(showError = true) {
       try {
         const url = this.endpoints.boardData + (window.location.search || '');
@@ -480,6 +522,297 @@
     }
   }
 
+  class CardFormManager {
+    constructor(board) {
+      this.board = board;
+      this.meta = board.meta || {};
+      this.form = document.getElementById('cardForm');
+      if (!this.form) {
+        return;
+      }
+      this.modal = $('#cardModal');
+      this.modalTitle = document.querySelector('#cardModal .modal-title');
+      this.paymentIdInput = document.getElementById('cardPaymentId');
+      this.statusInput = document.getElementById('cardStatusInput');
+      this.statusLabelEl = document.getElementById('cardStatusLabel');
+      this.submitBtn = document.getElementById('cardSubmitBtn');
+      this.clientSelect = document.getElementById('cardClientSelect');
+      this.clientNameInput = document.getElementById('cardClientName');
+      this.clientEmailInput = document.getElementById('cardClientEmail');
+      this.clientPhoneInput = document.getElementById('cardClientPhone');
+      this.projectSelect = document.getElementById('cardProjectSelect');
+      this.amountInput = document.getElementById('cardAmount');
+      this.dueInput = document.getElementById('cardDueDate');
+      this.currencyInput = document.getElementById('cardCurrency');
+      this.categoryInput = document.getElementById('cardCategory');
+      this.descriptionInput = document.getElementById('cardDescription');
+      this.notesInput = document.getElementById('cardNotes');
+      this.mode = 'create';
+      this.currentStatus = 'a_vencer';
+
+      if (this.clientSelect) {
+        this.clientSelect.addEventListener('change', () => this.fillClientFieldsFromSelect());
+      }
+      this.form.addEventListener('submit', (event) => this.handleSubmit(event));
+      if (this.modal && this.modal.length) {
+        this.modal.on('hidden.bs.modal', () => this.reset());
+      }
+    }
+
+    fillClientFieldsFromSelect() {
+      if (!this.clientSelect) return;
+      const selectedId = this.clientSelect.value;
+      if (!selectedId) {
+        return;
+      }
+      const clients = this.meta.clients || [];
+      const found = clients.find((client) => String(client.id) === String(selectedId));
+      if (found) {
+        if (this.clientNameInput) this.clientNameInput.value = found.name || '';
+        if (this.clientEmailInput) this.clientEmailInput.value = found.email || '';
+        if (this.clientPhoneInput) this.clientPhoneInput.value = found.phone || '';
+      }
+    }
+
+    openCreate(status) {
+      this.reset();
+      this.mode = 'create';
+      this.currentStatus = status || 'a_vencer';
+      this.updateStatusLabel();
+      if (this.submitBtn) {
+        this.submitBtn.textContent = 'Salvar cobrança';
+      }
+      if (this.modalTitle) {
+        this.modalTitle.textContent = 'Nova cobrança';
+      }
+      if (this.modal && this.modal.length) {
+        this.modal.modal('show');
+      }
+    }
+
+    openEdit(cardEl) {
+      if (!cardEl) return;
+      this.reset();
+      this.mode = 'edit';
+      const data = cardEl.dataset || {};
+      if (this.paymentIdInput) {
+        this.paymentIdInput.value = data.paymentId || '';
+      }
+      this.currentStatus = data.status || 'a_vencer';
+      this.updateStatusLabel();
+      this.setSelectValue(this.projectSelect, data.projectId, data.projectName || '');
+      this.setSelectValue(this.clientSelect, data.clientId, data.clientName || '');
+      if (!this.clientSelect || !this.clientSelect.value) {
+        if (this.clientNameInput) this.clientNameInput.value = data.clientName || '';
+        if (this.clientEmailInput) this.clientEmailInput.value = data.clientEmail || '';
+        if (this.clientPhoneInput) this.clientPhoneInput.value = data.clientPhone || '';
+      } else {
+        this.fillClientFieldsFromSelect();
+      }
+      if (this.clientNameInput && data.clientName) this.clientNameInput.value = data.clientName;
+      if (this.clientEmailInput && data.clientEmail) this.clientEmailInput.value = data.clientEmail;
+      if (this.clientPhoneInput && data.clientPhone) this.clientPhoneInput.value = data.clientPhone;
+      if (this.amountInput) this.amountInput.value = data.amount || '';
+      if (this.dueInput) this.dueInput.value = data.dueDate || '';
+      if (this.currencyInput) this.currencyInput.value = data.currency || 'BRL';
+      if (this.categoryInput) this.categoryInput.value = data.category || '';
+      if (this.descriptionInput) this.descriptionInput.value = data.description || '';
+      if (this.notesInput) this.notesInput.value = data.notes || '';
+      if (this.submitBtn) {
+        this.submitBtn.textContent = 'Atualizar cobrança';
+      }
+      if (this.modalTitle) {
+        this.modalTitle.textContent = 'Editar cobrança';
+      }
+      if (this.modal && this.modal.length) {
+        this.modal.modal('show');
+      }
+    }
+
+    async handleSubmit(event) {
+      event.preventDefault();
+      const payload = this.serialize();
+      if (!payload) {
+        return;
+      }
+      try {
+        this.setSubmitting(true);
+        let response;
+        if (this.mode === 'create') {
+          payload.status = this.currentStatus;
+          response = await requestJSON(this.board.endpoints.cards, 'POST', payload);
+          showToast('Cobrança criada com sucesso.', 'success');
+        } else {
+          const paymentId = payload.payment_id;
+          if (!paymentId) {
+            throw new Error('Cobrança inválida.');
+          }
+          response = await requestJSON(`${this.board.endpoints.card}/${paymentId}`, 'PATCH', payload);
+          showToast('Cobrança atualizada.', 'success');
+        }
+        if (response && response.card) {
+          this.registerClientFromCard(response.card);
+          this.registerProjectFromCard(response.card);
+        }
+        if (this.modal && this.modal.length) {
+          this.modal.modal('hide');
+        }
+        await this.board.refreshBoard(false);
+      } catch (error) {
+        showToast(error.message || 'Não foi possível salvar a cobrança.', 'danger');
+      } finally {
+        this.setSubmitting(false);
+      }
+    }
+
+    serialize() {
+      if (!this.form) {
+        return null;
+      }
+      const formData = new FormData(this.form);
+      const payload = {};
+      formData.forEach((value, key) => {
+        if (typeof value === 'string') {
+          const trimmed = value.trim();
+          if (trimmed !== '') {
+            payload[key] = trimmed;
+          }
+        } else if (value != null) {
+          payload[key] = value;
+        }
+      });
+      delete payload.status;
+      if (this.mode === 'edit' && this.paymentIdInput && this.paymentIdInput.value) {
+        payload.payment_id = this.paymentIdInput.value;
+      }
+      return payload;
+    }
+
+    setSubmitting(isSubmitting) {
+      if (!this.submitBtn) return;
+      this.submitBtn.disabled = isSubmitting;
+      if (isSubmitting) {
+        this.submitBtn.textContent = 'Salvando...';
+      } else if (this.mode === 'create') {
+        this.submitBtn.textContent = 'Salvar cobrança';
+      } else {
+        this.submitBtn.textContent = 'Atualizar cobrança';
+      }
+    }
+
+    reset() {
+      if (!this.form) return;
+      this.form.reset();
+      if (this.clientSelect) this.clientSelect.value = '';
+      if (this.clientNameInput) this.clientNameInput.value = '';
+      if (this.clientEmailInput) this.clientEmailInput.value = '';
+      if (this.clientPhoneInput) this.clientPhoneInput.value = '';
+      if (this.projectSelect) this.projectSelect.value = '';
+      if (this.categoryInput) this.categoryInput.value = '';
+      if (this.descriptionInput) this.descriptionInput.value = '';
+      if (this.notesInput) this.notesInput.value = '';
+      if (this.paymentIdInput) this.paymentIdInput.value = '';
+      this.mode = 'create';
+      this.currentStatus = 'a_vencer';
+      this.updateStatusLabel();
+      if (this.submitBtn) {
+        this.submitBtn.textContent = 'Salvar cobrança';
+      }
+      if (this.modalTitle) {
+        this.modalTitle.textContent = 'Nova cobrança';
+      }
+    }
+
+    updateStatusLabel() {
+      if (this.statusInput) {
+        this.statusInput.value = this.currentStatus;
+      }
+      if (this.statusLabelEl) {
+        const meta = (this.meta.columnMeta || {})[this.currentStatus] || {};
+        this.statusLabelEl.textContent = meta.title || this.currentStatus;
+      }
+    }
+
+    setSelectValue(select, value, label) {
+      if (!select) return;
+      if (!value && value !== 0) {
+        select.value = '';
+        return;
+      }
+      const valueStr = String(value);
+      let option = Array.from(select.options).find((opt) => opt.value === valueStr);
+      if (!option && label) {
+        option = new Option(label, valueStr, true, true);
+        select.appendChild(option);
+        if (select === this.clientSelect) {
+          const clients = this.meta.clients || (this.meta.clients = []);
+          if (!clients.find((client) => String(client.id) === valueStr)) {
+            clients.push({ id: valueStr, name: label });
+          }
+        } else if (select === this.projectSelect) {
+          const projects = this.meta.projects || (this.meta.projects = []);
+          if (!projects.find((project) => String(project.id) === valueStr)) {
+            projects.push({ id: valueStr, name: label });
+          }
+        }
+      } else if (option) {
+        option.selected = true;
+      } else {
+        select.value = '';
+      }
+    }
+
+    registerClientFromCard(card) {
+      if (!card || !card.client_id) {
+        return;
+      }
+      const valueStr = String(card.client_id);
+      const clients = this.meta.clients || (this.meta.clients = []);
+      if (!clients.find((client) => String(client.id) === valueStr)) {
+        clients.push({
+          id: card.client_id,
+          name: card.client_name || '',
+          email: card.client_email || '',
+          phone: card.client_phone || '',
+        });
+      }
+      if (this.clientSelect) {
+        let option = Array.from(this.clientSelect.options).find((opt) => opt.value === valueStr);
+        if (!option) {
+          option = new Option(card.client_name || `Cliente ${valueStr}`, valueStr);
+          this.clientSelect.appendChild(option);
+        } else if (card.client_name) {
+          option.textContent = card.client_name;
+        }
+      }
+    }
+
+    registerProjectFromCard(card) {
+      if (!card || !card.project_id) {
+        return;
+      }
+      const valueStr = String(card.project_id);
+      const projects = this.meta.projects || (this.meta.projects = []);
+      if (!projects.find((project) => String(project.id) === valueStr)) {
+        projects.push({
+          id: card.project_id,
+          name: card.project_name || '',
+          client_id: card.client_id || null,
+          client_name: card.client_name || '',
+        });
+      }
+      if (this.projectSelect) {
+        let option = Array.from(this.projectSelect.options).find((opt) => opt.value === valueStr);
+        if (!option) {
+          option = new Option(card.project_name || `Projeto ${valueStr}`, valueStr);
+          this.projectSelect.appendChild(option);
+        } else if (card.project_name) {
+          option.textContent = card.project_name;
+        }
+      }
+    }
+  }
+
   class KanbanColumn {
     constructor(element, status, meta) {
       this.element = element;
@@ -573,8 +906,10 @@
         : '';
 
       const actionsHtml = status === 'perdido'
-        ? `<button class="btn btn-sm btn-outline-primary js-reactivate" data-payment-id="${card.payment_id}">🔄 Reativar cobrança</button>`
-        : `<button class="btn btn-sm btn-outline-warning js-move-to-collection" data-payment-id="${card.payment_id}">➡️ Mover p/ Em Cobrança</button>`;
+        ? `<button class="btn btn-sm btn-outline-primary js-reactivate" data-payment-id="${card.payment_id}">🔄 Reativar cobrança</button>
+           <button class="btn btn-sm btn-outline-danger js-delete-card" data-payment-id="${card.payment_id}">🗑️ Excluir</button>`
+        : `<button class="btn btn-sm btn-outline-warning js-move-to-collection" data-payment-id="${card.payment_id}">➡️ Mover p/ Em Cobrança</button>
+           <button class="btn btn-sm btn-outline-danger js-delete-card" data-payment-id="${card.payment_id}">🗑️ Excluir</button>`;
 
       return `
         <div class="kanban-card ${status === 'perdido' ? 'kanban-card-lost' : ''}" data-payment-id="${card.payment_id}"
@@ -590,6 +925,14 @@
           data-last-channel="${escapeAttr(card.last_contact_channel || '')}"
           data-lost-reason="${escapeAttr(lostReason)}"
           data-lost-details="${escapeAttr(lostDetails)}"
+          data-project-id="${card.project_id || ''}"
+          data-client-id="${card.client_id || ''}"
+          data-description="${escapeAttr(card.description || '')}"
+          data-category="${escapeAttr(card.category || '')}"
+          data-notes="${escapeAttr(card.notes || '')}"
+          data-currency="${escapeAttr(card.currency || 'BRL')}"
+          data-client-email="${escapeAttr(card.client_email || '')}"
+          data-client-phone="${escapeAttr(card.client_phone || '')}"
           data-priority="${escapeAttr(priority)}">
           <div class="kanban-card-inner" style="border-left-color: ${escapeAttr(accent)};">
             <div class="kanban-card-header">
@@ -605,12 +948,12 @@
                 </button>
                 <div class="dropdown-menu dropdown-menu-right">
                   <button class="dropdown-item js-open-details" data-payment-id="${card.payment_id}">👁️ Ver detalhes</button>
+                  <button class="dropdown-item js-edit-card" data-payment-id="${card.payment_id}">✏️ Editar cobrança</button>
                   <div class="dropdown-divider"></div>
-                  <a class="dropdown-item" href="/pagamento/edit/${card.payment_id}">✏️ Editar pagamento</a>
                   <button class="dropdown-item js-send-reminder" data-payment-id="${card.payment_id}">📧 Enviar lembrete rápido</button>
                   ${phoneLink ? `<a class="dropdown-item" href="${escapeAttr(phoneLink)}" target="_blank">💬 Abrir WhatsApp</a>` : ''}
                   <div class="dropdown-divider"></div>
-                  <a class="dropdown-item text-danger" href="/pagamento/delete/${card.payment_id}" onclick="return confirm('Excluir esta cobrança?');">🗑️ Remover cobrança</a>
+                  <button class="dropdown-item text-danger js-delete-card" data-payment-id="${card.payment_id}">🗑️ Remover cobrança</button>
                 </div>
               </div>
             </div>
@@ -711,17 +1054,25 @@
     evt.from.insertBefore(evt.item, referenceNode);
   }
 
-  async function postJSON(url, data) {
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-      body: JSON.stringify(data),
-    });
+  async function requestJSON(url, method = 'GET', data) {
+    const options = {
+      method,
+      headers: { Accept: 'application/json' },
+    };
+    if (data !== undefined) {
+      options.headers['Content-Type'] = 'application/json';
+      options.body = JSON.stringify(data);
+    }
+    const response = await fetch(url, options);
     const body = await response.json().catch(() => ({}));
     if (!response.ok || body.success === false) {
       throw new Error(body.message || 'Falha na operação.');
     }
     return body;
+  }
+
+  async function postJSON(url, data) {
+    return requestJSON(url, 'POST', data);
   }
 
   function showToast(message, type = 'info') {

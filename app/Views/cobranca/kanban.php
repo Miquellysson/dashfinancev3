@@ -39,6 +39,8 @@ $jsonMeta = json_encode([
     'responsaveis' => $responsaveis,
     'statusOptions' => $statusOptions,
     'orderOptions' => $orderOptions,
+    'projects' => $projectsList,
+    'clients' => $clientsList,
 ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 ?>
 
@@ -311,6 +313,93 @@ $jsonMeta = json_encode([
 </div>
 
 <!-- Modais -->
+<div class="modal fade" id="cardModal" tabindex="-1" role="dialog" aria-hidden="true">
+  <div class="modal-dialog modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Nova cobrança</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+      </div>
+      <form id="cardForm">
+        <input type="hidden" name="payment_id" id="cardPaymentId">
+        <input type="hidden" name="status" id="cardStatusInput">
+        <div class="modal-body">
+          <div class="alert alert-light border mb-3" id="cardStatusBadge">Status: <strong id="cardStatusLabel">—</strong></div>
+          <div class="form-row">
+            <div class="form-group col-md-6">
+              <label>Cliente existente</label>
+              <select class="form-control" name="client_id" id="cardClientSelect">
+                <option value="">Novo cliente...</option>
+                <?php foreach ($clientsList as $client): ?>
+                  <option value="<?= (int)$client['id'] ?>"><?= h($client['name']) ?><?= !empty($client['email']) ? ' — ' . h($client['email']) : '' ?></option>
+                <?php endforeach; ?>
+              </select>
+            </div>
+            <div class="form-group col-md-6">
+              <label>Nome do cliente</label>
+              <input type="text" class="form-control" name="client_name" id="cardClientName" placeholder="Razão social ou contato">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group col-md-6">
+              <label>Email</label>
+              <input type="email" class="form-control" name="client_email" id="cardClientEmail" placeholder="cliente@email.com">
+            </div>
+            <div class="form-group col-md-6">
+              <label>Telefone</label>
+              <input type="text" class="form-control" name="client_phone" id="cardClientPhone" placeholder="(00) 00000-0000">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group col-md-6">
+              <label>Projeto (opcional)</label>
+              <select class="form-control" name="project_id" id="cardProjectSelect">
+                <option value="">Sem projeto vinculado</option>
+                <?php foreach ($projectsList as $project): ?>
+                  <option value="<?= (int)$project['id'] ?>"><?= h($project['name']) ?><?= !empty($project['client_name']) ? ' — ' . h($project['client_name']) : '' ?></option>
+                <?php endforeach; ?>
+              </select>
+            </div>
+            <div class="form-group col-md-3">
+              <label>Valor</label>
+              <input type="number" min="0" step="0.01" class="form-control" name="amount" id="cardAmount" placeholder="0.00" required>
+            </div>
+            <div class="form-group col-md-3">
+              <label>Vencimento</label>
+              <input type="date" class="form-control" name="due_date" id="cardDueDate" required>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group col-md-3">
+              <label>Moeda</label>
+              <select class="form-control" name="currency" id="cardCurrency">
+                <option value="BRL">Real (BRL)</option>
+                <option value="USD">Dólar (USD)</option>
+              </select>
+            </div>
+            <div class="form-group col-md-3">
+              <label>Categoria</label>
+              <input type="text" class="form-control" name="category" id="cardCategory" placeholder="Serviços, Manutenção...">
+            </div>
+            <div class="form-group col-md-6">
+              <label>Descrição</label>
+              <input type="text" class="form-control" name="description" id="cardDescription" placeholder="Resumo da cobrança">
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Observações</label>
+            <textarea class="form-control" rows="3" name="notes" id="cardNotes" placeholder="Informações internas sobre a cobrança"></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-primary" id="cardSubmitBtn">Salvar cobrança</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
 <div class="modal fade" id="reminderModal" tabindex="-1" role="dialog" aria-hidden="true">
   <div class="modal-dialog modal-lg" role="document">
     <div class="modal-content">
@@ -498,7 +587,9 @@ window.COBRANCA_KANBAN = {
     move: '/cobranca/move',
     contact: '/cobranca/registrar-contato',
     reminder: '/cobranca/enviar-lembrete',
-    details: '/cobranca/detalhes'
+    details: '/cobranca/detalhes',
+    cards: '/cobranca/cards',
+    card: '/cobranca/card'
   }
 };
 </script>

@@ -79,19 +79,79 @@ CREATE INDEX idx_projects_tipo_servico ON projects (tipo_servico);
 CREATE TABLE IF NOT EXISTS payments (
   id INT AUTO_INCREMENT PRIMARY KEY,
   project_id INT,
+  client_id INT NULL,
   kind ENUM('one_time','recurring') DEFAULT 'one_time',
   amount DECIMAL(12,2) NOT NULL,
   currency CHAR(3) NOT NULL DEFAULT 'BRL',
   transaction_type ENUM('receita','despesa') NOT NULL DEFAULT 'receita',
   description VARCHAR(255) NULL,
   category VARCHAR(120) NULL,
+  notes TEXT NULL,
   due_date DATE NULL,
   paid_at DATE NULL,
   status_id INT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE SET NULL,
+  FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE SET NULL,
   FOREIGN KEY (status_id) REFERENCES status_catalog(id) ON DELETE SET NULL
+);
+
+CREATE TABLE IF NOT EXISTS collection_cards (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  payment_id INT NOT NULL,
+  manual_status ENUM('a_vencer','vencendo','vencido','em_cobranca','perdido') DEFAULT NULL,
+  status_since DATETIME DEFAULT NULL,
+  last_contact_at DATETIME DEFAULT NULL,
+  last_contact_channel ENUM('email','whatsapp','sms','ligacao','outro') DEFAULT NULL,
+  last_contact_notes VARCHAR(255) DEFAULT NULL,
+  lost_reason ENUM('cliente_nao_responde','cliente_recusa','empresa_fechou','valor_nao_compensa','outros') DEFAULT NULL,
+  lost_details TEXT DEFAULT NULL,
+  lost_at DATETIME DEFAULT NULL,
+  created_by INT DEFAULT NULL,
+  updated_by INT DEFAULT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY uniq_collection_cards_payment (payment_id),
+  CONSTRAINT fk_collection_card_payment FOREIGN KEY (payment_id) REFERENCES payments(id) ON DELETE CASCADE,
+  CONSTRAINT fk_collection_card_created_by FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL,
+  CONSTRAINT fk_collection_card_updated_by FOREIGN KEY (updated_by) REFERENCES users(id) ON DELETE SET NULL
+);
+
+CREATE TABLE IF NOT EXISTS collection_movements (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  card_id INT NOT NULL,
+  payment_id INT NOT NULL,
+  from_status ENUM('a_vencer','vencendo','vencido','em_cobranca','perdido') DEFAULT NULL,
+  to_status ENUM('a_vencer','vencendo','vencido','em_cobranca','perdido') NOT NULL,
+  reason_code VARCHAR(60) DEFAULT NULL,
+  notes TEXT DEFAULT NULL,
+  created_by INT DEFAULT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT fk_collection_move_card FOREIGN KEY (card_id) REFERENCES collection_cards(id) ON DELETE CASCADE,
+  CONSTRAINT fk_collection_move_payment FOREIGN KEY (payment_id) REFERENCES payments(id) ON DELETE CASCADE,
+  CONSTRAINT fk_collection_move_user FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL,
+  INDEX idx_collection_movements_payment (payment_id),
+  INDEX idx_collection_movements_created_at (created_at)
+);
+
+CREATE TABLE IF NOT EXISTS collection_contacts (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  card_id INT NOT NULL,
+  payment_id INT NOT NULL,
+  contact_type ENUM('email','whatsapp','sms','ligacao','outro') NOT NULL,
+  contacted_at DATETIME NOT NULL,
+  client_response VARCHAR(255) DEFAULT NULL,
+  expected_payment_at DATE DEFAULT NULL,
+  notes TEXT DEFAULT NULL,
+  is_reminder TINYINT(1) NOT NULL DEFAULT 0,
+  created_by INT DEFAULT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT fk_collection_contact_card FOREIGN KEY (card_id) REFERENCES collection_cards(id) ON DELETE CASCADE,
+  CONSTRAINT fk_collection_contact_payment FOREIGN KEY (payment_id) REFERENCES payments(id) ON DELETE CASCADE,
+  CONSTRAINT fk_collection_contact_user FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL,
+  INDEX idx_collection_contacts_payment (payment_id),
+  INDEX idx_collection_contacts_contacted_at (contacted_at)
 );
 
 CREATE TABLE IF NOT EXISTS financial_reserve_entries (
@@ -232,7 +292,9 @@ VALUES
 ('Pending', '#f6c23e', 9),
 ('Paid', '#1cc88a', 10),
 ('Overdue', '#e74a3b', 11),
-('Dropped', '#858796', 12)
+('Dropped', '#858796', 12),
+('Em Cobrança', '#f97316', 13),
+('Perdido', '#6B7280', 14)
 ON DUPLICATE KEY UPDATE color_hex = VALUES(color_hex), sort_order = VALUES(sort_order);
 
 INSERT INTO projects (
@@ -246,24 +308,24 @@ INSERT INTO projects (
 ON DUPLICATE KEY UPDATE name=VALUES(name);
 
 INSERT INTO payments (
-  id, project_id, kind, amount, currency, transaction_type,
-  description, category, due_date, paid_at, status_id
+  id, project_id, client_id, kind, amount, currency, transaction_type,
+  description, category, notes, due_date, paid_at, status_id
 ) VALUES
-(1, 1, 'one_time', 2500.00, 'BRL', 'receita',
- 'Pagamento inicial - 50%', 'Entrada', '2024-01-20', '2024-01-20',
+(1, 1, 1, 'one_time', 2500.00, 'BRL', 'receita',
+ 'Pagamento inicial - 50%', 'Entrada', 'Contrato anual', '2024-01-20', '2024-01-20',
  (SELECT id FROM status_catalog WHERE name = 'Recebido')),
-(2, 1, 'one_time', 2500.00, 'BRL', 'receita',
- 'Pagamento final - 50%', 'Conclusão', '2024-02-15', NULL,
+(2, 1, 1, 'one_time', 2500.00, 'BRL', 'receita',
+ 'Pagamento final - 50%', 'Conclusão', NULL, '2024-02-15', NULL,
  (SELECT id FROM status_catalog WHERE name = 'A Receber')),
-(3, 2, 'one_time', 4000.00, 'BRL', 'receita',
- 'Primeira parcela', 'Consultoria', '2024-02-10', '2024-02-12',
+(3, 2, 2, 'one_time', 4000.00, 'BRL', 'receita',
+ 'Primeira parcela', 'Consultoria', 'Implantação etapa 1', '2024-02-10', '2024-02-12',
  (SELECT id FROM status_catalog WHERE name = 'Recebido')),
-(4, 2, 'one_time', 4000.00, 'BRL', 'receita',
- 'Segunda parcela', 'Consultoria', '2024-03-10', NULL,
+(4, 2, 2, 'one_time', 4000.00, 'BRL', 'receita',
+ 'Segunda parcela', 'Consultoria', NULL, '2024-03-10', NULL,
  (SELECT id FROM status_catalog WHERE name = 'Em Atraso')),
-(5, 3, 'one_time', 6000.00, 'BRL', 'receita',
- 'Entrada do projeto', 'App', '2024-03-15', '2024-03-18',
- (SELECT id FROM status_catalog WHERE name = 'Cancelado'))
+(5, 3, 3, 'one_time', 6000.00, 'BRL', 'receita',
+ 'Entrada do projeto', 'App', 'Pagamento 30%', '2024-03-15', '2024-03-18',
+  (SELECT id FROM status_catalog WHERE name = 'Cancelado'))
 ON DUPLICATE KEY UPDATE
   amount = VALUES(amount),
   currency = VALUES(currency),

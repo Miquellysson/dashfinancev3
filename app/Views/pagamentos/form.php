@@ -4,6 +4,7 @@ ob_start();
 
 $id        = $payment['id']        ?? null;
 $projectId = $payment['project_id']?? null;
+$clientId  = $payment['client_id'] ?? ($payment['project_client_id'] ?? ($_POST['client_id'] ?? null));
 $amount    = $payment['amount']    ?? '';
 $currency  = strtoupper($payment['currency'] ?? ($_POST['currency'] ?? 'BRL'));
 $dueDate   = $payment['due_date']  ?? '';
@@ -14,6 +15,7 @@ $kind      = $payment['kind']      ?? 'one_time';
 $transactionType = strtolower($payment['transaction_type'] ?? ($_POST['transaction_type'] ?? 'receita'));
 $description = $payment['description'] ?? ($_POST['description'] ?? '');
 $category    = $payment['category']    ?? ($_POST['category'] ?? '');
+$notes       = $payment['notes']       ?? ($_POST['notes'] ?? '');
 ?>
 <h1 class="h4 mb-3"><?= htmlspecialchars($title) ?></h1>
 
@@ -74,6 +76,24 @@ $category    = $payment['category']    ?? ($_POST['category'] ?? '');
       </div>
 
       <div class="form-row">
+        <div class="form-group col-md-6">
+          <label>Cliente (opcional)</label>
+          <select name="client_id" id="paymentClientSelect" class="form-control">
+            <option value="">Selecionar cliente...</option>
+            <?php foreach (($clients ?? []) as $cl): ?>
+              <option value="<?= (int)$cl['id'] ?>" <?= ((string)$clientId === (string)$cl['id']) ? 'selected' : '' ?>>
+                <?= htmlspecialchars($cl['name']) ?><?php if (!empty($cl['email'])) echo ' — '.htmlspecialchars($cl['email']); ?>
+              </option>
+            <?php endforeach; ?>
+          </select>
+        </div>
+        <div class="form-group col-md-6">
+          <label>Observações internas</label>
+          <textarea name="notes" class="form-control" rows="1" placeholder="Informações adicionais sobre esta cobrança"><?= htmlspecialchars($notes) ?></textarea>
+        </div>
+      </div>
+
+      <div class="form-row">
         <div class="form-group col-md-4">
           <label>Status</label>
           <select name="status" id="statusSelect" class="form-control">
@@ -121,29 +141,50 @@ $category    = $payment['category']    ?? ($_POST['category'] ?? '');
   document.addEventListener('DOMContentLoaded', function () {
     const typeSelect = document.getElementById('transactionType');
     const statusSelect = document.getElementById('statusSelect');
-    if (!typeSelect || !statusSelect) return;
+    const projectSelect = document.querySelector('select[name="project_id"]');
+    const clientSelect = document.getElementById('paymentClientSelect');
+    const projectClientMap = <?= json_encode(array_reduce($projects ?? [], function (array $carry, array $pr) {
+      if (!empty($pr['id'])) {
+        $carry[(string)$pr['id']] = $pr['client_id'] ?? null;
+      }
+      return $carry;
+    }, [])); ?>;
 
-    const filterStatuses = () => {
-      const currentType = typeSelect.value || 'receita';
-      let firstVisible = null;
-      Array.from(statusSelect.options).forEach((option) => {
-        const optionType = option.dataset.type;
-        const shouldShow = !optionType || optionType === currentType;
-        option.hidden = !shouldShow;
-        if (!shouldShow && option.selected) {
-          option.selected = false;
+    if (typeSelect && statusSelect) {
+      const filterStatuses = () => {
+        const currentType = typeSelect.value || 'receita';
+        let firstVisible = null;
+        Array.from(statusSelect.options).forEach((option) => {
+          const optionType = option.dataset.type;
+          const shouldShow = !optionType || optionType === currentType;
+          option.hidden = !shouldShow;
+          if (!shouldShow && option.selected) {
+            option.selected = false;
+          }
+          if (shouldShow && !firstVisible && option.value !== '') {
+            firstVisible = option;
+          }
+        });
+        if (!statusSelect.value && firstVisible) {
+          firstVisible.selected = true;
         }
-        if (shouldShow && !firstVisible && option.value !== '') {
-          firstVisible = option;
+      };
+
+      typeSelect.addEventListener('change', filterStatuses);
+      filterStatuses();
+    }
+
+    if (projectSelect && clientSelect) {
+      projectSelect.addEventListener('change', () => {
+        const target = projectClientMap[projectSelect.value];
+        if (!target) {
+          return;
+        }
+        if (!clientSelect.value) {
+          clientSelect.value = String(target);
         }
       });
-      if (!statusSelect.value && firstVisible) {
-        firstVisible.selected = true;
-      }
-    };
-
-    typeSelect.addEventListener('change', filterStatuses);
-    filterStatuses();
+    }
   });
 </script>
 

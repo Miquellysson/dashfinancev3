@@ -31,7 +31,11 @@ class PaymentModel {
     private function normalizeData(array $data): array {
         $out = [];
 
-        $out['project_id'] = $data['project_id'] ?? null;
+        $projectId = $data['project_id'] ?? null;
+        $out['project_id'] = $projectId !== null && $projectId !== '' ? (int)$projectId : null;
+
+        $clientId = $data['client_id'] ?? null;
+        $out['client_id'] = $clientId !== null && $clientId !== '' ? (int)$clientId : null;
 
         $amount = $data['amount'] ?? null;
         if (is_string($amount)) {
@@ -67,6 +71,9 @@ class PaymentModel {
 
         $categoryRaw = isset($data['category']) ? trim((string)$data['category']) : '';
         $out['category'] = $categoryRaw !== '' ? strip_tags($categoryRaw) : null;
+
+        $notesRaw = isset($data['notes']) ? trim((string)$data['notes']) : '';
+        $out['notes'] = $notesRaw !== '' ? $notesRaw : null;
 
         // kind (default: one_time)
         $out['kind'] = $data['kind'] ?? 'one_time';
@@ -154,7 +161,7 @@ class PaymentModel {
         }
 
         if (!empty($filters['search'])) {
-            $conditions[] = '(p.description LIKE :search OR p.category LIKE :search OR pr.name LIKE :search OR c.name LIKE :search)';
+            $conditions[] = '(p.description LIKE :search OR p.category LIKE :search OR pr.name LIKE :search OR cli_direct.name LIKE :search OR cli_project.name LIKE :search)';
             $params[':search'] = '%' . $filters['search'] . '%';
         }
 
@@ -163,11 +170,17 @@ class PaymentModel {
         $sql = "
             SELECT p.*,
                    pr.name AS project_name,
-                   c.name  AS client_name,
+                   pr.id   AS project_id,
+                   pr.client_id AS project_client_id,
+                   COALESCE(cli_direct.id, cli_project.id) AS client_id,
+                   COALESCE(cli_direct.name, cli_project.name) AS client_name,
+                   COALESCE(cli_direct.email, cli_project.email) AS client_email,
+                   COALESCE(cli_direct.phone, cli_project.phone) AS client_phone,
                    s.name  AS status_name
             FROM payments p
-            LEFT JOIN projects pr       ON p.project_id = pr.id
-            LEFT JOIN clients  c        ON pr.client_id = c.id
+            LEFT JOIN projects pr              ON p.project_id = pr.id
+            LEFT JOIN clients  cli_project     ON pr.client_id = cli_project.id
+            LEFT JOIN clients  cli_direct      ON p.client_id = cli_direct.id
             LEFT JOIN status_catalog s  ON s.id = p.status_id
             {$whereSql}
             ORDER BY COALESCE(p.paid_at, p.due_date) DESC, p.id DESC
@@ -191,9 +204,15 @@ class PaymentModel {
             SELECT p.*,
                    pr.name AS project_name,
                    pr.client_id AS project_client_id,
+                   COALESCE(cli_direct.id, cli_project.id) AS client_id,
+                   COALESCE(cli_direct.name, cli_project.name) AS client_name,
+                   COALESCE(cli_direct.email, cli_project.email) AS client_email,
+                   COALESCE(cli_direct.phone, cli_project.phone) AS client_phone,
                    s.name  AS status_name
             FROM payments p
             LEFT JOIN projects pr      ON p.project_id = pr.id
+            LEFT JOIN clients cli_project ON pr.client_id = cli_project.id
+            LEFT JOIN clients cli_direct  ON p.client_id = cli_direct.id
             LEFT JOIN status_catalog s ON s.id = p.status_id
             WHERE p.id = :id
             LIMIT 1
@@ -206,23 +225,29 @@ class PaymentModel {
         $d = $this->normalizeData($data);
 
         $sql = "INSERT INTO payments
-                   (project_id, kind, amount, currency, transaction_type, description, category, due_date, paid_at, status_id, created_at, updated_at)
+                   (project_id, client_id, kind, amount, currency, transaction_type, description, category, notes, due_date, paid_at, status_id, created_at, updated_at)
                 VALUES
-                   (:project_id, :kind, :amount, :currency, :transaction_type, :description, :category, :due_date, :paid_at, :status_id, NOW(), NOW())";
+                   (:project_id, :client_id, :kind, :amount, :currency, :transaction_type, :description, :category, :notes, :due_date, :paid_at, :status_id, NOW(), NOW())";
 
         $st = $this->pdo->prepare($sql);
-        return $st->execute([
+        $executed = $st->execute([
             ':project_id' => $d['project_id'],
+            ':client_id' => $d['client_id'],
             ':kind'       => $d['kind'],
             ':amount'     => $d['amount'],
             ':currency'   => $d['currency'],
             ':transaction_type' => $d['transaction_type'],
             ':description' => $d['description'],
             ':category'   => $d['category'],
+            ':notes'      => $d['notes'],
             ':due_date'   => $d['due_date'],
             ':paid_at'    => $d['paid_at'],
             ':status_id'  => $d['status_id'],
         ]);
+        if (!$executed) {
+            return false;
+        }
+        return (int)$this->pdo->lastInsertId();
     }
 
     public function update($id, $data) {
@@ -230,12 +255,14 @@ class PaymentModel {
 
         $sql = "UPDATE payments SET
                     project_id = :project_id,
+                    client_id  = :client_id,
                     kind       = :kind,
                     amount     = :amount,
                     currency   = :currency,
                     transaction_type = :transaction_type,
                     description = :description,
                     category    = :category,
+                    notes       = :notes,
                     due_date   = :due_date,
                     paid_at    = :paid_at,
                     status_id  = :status_id,
@@ -246,11 +273,13 @@ class PaymentModel {
         return $st->execute([
             ':project_id' => $d['project_id'],
             ':kind'       => $d['kind'],
+            ':client_id'  => $d['client_id'],
             ':amount'     => $d['amount'],
             ':currency'   => $d['currency'],
             ':transaction_type' => $d['transaction_type'],
             ':description' => $d['description'],
             ':category'   => $d['category'],
+            ':notes'      => $d['notes'],
             ':due_date'   => $d['due_date'],
             ':paid_at'    => $d['paid_at'],
             ':status_id'  => $d['status_id'],

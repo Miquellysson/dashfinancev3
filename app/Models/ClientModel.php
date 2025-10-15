@@ -62,13 +62,17 @@ class ClientModel {
                 VALUES
                     (:name, :email, :phone, :entry_date, :notes, NOW(), NOW())";
         $st = $this->pdo->prepare($sql);
-        return $st->execute([
+        $executed = $st->execute([
             ':name'       => $data['name']  ?? null,
             ':email'      => $data['email'] ?? null,
             ':phone'      => $data['phone'] ?? null,
             ':entry_date' => $entryDate,
             ':notes'      => $notes,
         ]);
+        if (!$executed) {
+            return false;
+        }
+        return (int)$this->pdo->lastInsertId();
     }
 
     public function update($id, $data) {

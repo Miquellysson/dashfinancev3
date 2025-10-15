@@ -1,11 +1,13 @@
 <?php
 require_once __DIR__ . '/../Models/PaymentModel.php';
 require_once __DIR__ . '/../Models/ProjectModel.php';
+require_once __DIR__ . '/../Models/ClientModel.php';
 
 class PagamentoController {
     private $pdo;
     private $paymentModel;
     private $projectModel;
+    private $clientModel;
 
     public function __construct($pdo) {
         $this->pdo = $pdo;
@@ -13,6 +15,7 @@ class PagamentoController {
         if (empty($_SESSION['user_id'])) { Utils::redirect('/auth/login'); }
         $this->paymentModel = new PaymentModel($pdo);
         $this->projectModel = new ProjectModel($pdo);
+        $this->clientModel = new ClientModel($pdo);
     }
 
     private function statusOptions(): array {
@@ -62,6 +65,7 @@ class PagamentoController {
     public function create() {
         $payment = null;
         $projects = $this->projectModel->getAll(1000,0);
+        $clients = $this->clientModel->getAll(1000,0);
         $statusOptions = $this->statusOptions();
         include __DIR__ . '/../Views/pagamentos/form.php';
     }
@@ -69,6 +73,7 @@ class PagamentoController {
     public function edit($id) {
         $payment = $this->paymentModel->getById($id);
         $projects = $this->projectModel->getAll(1000,0);
+        $clients = $this->clientModel->getAll(1000,0);
         $statusOptions = $this->statusOptions();
         if ($payment) {
             $payment['transaction_type'] = $payment['transaction_type'] ?? 'receita';
@@ -80,12 +85,14 @@ class PagamentoController {
     public function save() {
         $data = [
             'project_id' => $_POST['project_id'] ?? null,
+            'client_id' => $_POST['client_id'] ?? null,
             'amount'     => $_POST['amount'] ?? null,
             'kind'       => $_POST['kind'] ?? 'one_time',
             'currency'   => $_POST['currency'] ?? 'BRL',
             'transaction_type' => $_POST['transaction_type'] ?? 'receita',
             'description' => $_POST['description'] ?? null,
             'category'   => $_POST['category'] ?? null,
+            'notes'      => $_POST['notes'] ?? null,
             'due_date'   => $_POST['due_date'] ?? null,
             'paid_at'    => $_POST['paid_at'] ?? null,
             // pode vir status_id (numérico) ou status (texto)

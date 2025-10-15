@@ -5,6 +5,7 @@ require_once __DIR__ . '/../Models/ClientModel.php';
 require_once __DIR__ . '/../Models/UserModel.php';
 require_once __DIR__ . '/../Models/NotificationModel.php';
 require_once __DIR__ . '/../Models/PaymentModel.php';
+require_once __DIR__ . '/../Models/ProjectModel.php';
 require_once __DIR__ . '/../Models/CollectionBoardModel.php';
 
 class CobrancaController {
@@ -15,6 +16,7 @@ class CobrancaController {
     private UserModel $users;
     private NotificationModel $notifications;
     private PaymentModel $payments;
+    private ProjectModel $projects;
     private CollectionBoardModel $collectionBoard;
 
     public function __construct(PDO $pdo) {
@@ -29,6 +31,7 @@ class CobrancaController {
         $this->users = new UserModel($pdo);
         $this->notifications = new NotificationModel($pdo);
         $this->payments = new PaymentModel($pdo);
+        $this->projects = new ProjectModel($pdo);
         $this->collectionBoard = new CollectionBoardModel($pdo);
     }
 
@@ -53,6 +56,22 @@ class CobrancaController {
         $templates = $this->messageTemplates();
         $statusOptions = $this->statusFilterOptions();
         $orderOptions = $this->orderOptions();
+        $projectsList = array_map(static function (array $project): array {
+            return [
+                'id' => (int)($project['id'] ?? 0),
+                'name' => $project['name'] ?? '',
+                'client_id' => isset($project['client_id']) ? (int)$project['client_id'] : null,
+                'client_name' => $project['client_name'] ?? ($project['nome_cliente'] ?? ''),
+            ];
+        }, $this->projects->getAll(500, 0));
+        $clientsList = array_map(static function (array $client): array {
+            return [
+                'id' => (int)($client['id'] ?? 0),
+                'name' => $client['name'] ?? '',
+                'email' => $client['email'] ?? null,
+                'phone' => $client['phone'] ?? null,
+            ];
+        }, $this->clients->getAll(500, 0));
 
         $title = 'Gestão de Cobranças';
         ob_start();
@@ -94,6 +113,195 @@ class CobrancaController {
             'summary' => $board['summary'] ?? [],
             'filters' => $board['filters_used'] ?? $filters,
         ]);
+    }
+
+    public function cards() {
+        $method = strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET');
+        if ($method === 'GET') {
+            return $this->listCardsEndpoint();
+        }
+        if ($method === 'POST') {
+            return $this->createCardEndpoint();
+        }
+        return $this->jsonError('Método não permitido.', 405);
+    }
+
+    public function card($id) {
+        $paymentId = (int)$id;
+        if ($paymentId <= 0) {
+            return $this->jsonError('Cobrança inválida.', 404);
+        }
+
+        $method = strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET');
+        switch ($method) {
+            case 'GET':
+                return $this->showCardEndpoint($paymentId);
+            case 'PUT':
+            case 'PATCH':
+                return $this->updateCardEndpoint($paymentId);
+            case 'DELETE':
+                return $this->deleteCardEndpoint($paymentId);
+            default:
+                return $this->jsonError('Método não permitido.', 405);
+        }
+    }
+
+    private function listCardsEndpoint(): void {
+        $status = $_GET['status'] ?? null;
+        $filters = [];
+        if ($status && in_array($status, $this->boardStatusOptions(), true)) {
+            $filters['column'] = $status;
+        }
+
+        $board = $this->collectionBoard->fetchBoard($filters);
+        $columns = $board['columns'] ?? [];
+        if ($status) {
+            $columns = isset($columns[$status]) ? [$status => $columns[$status]] : [];
+        }
+
+        $this->jsonResponse([
+            'columns' => $columns,
+            'summary' => $board['summary'] ?? [],
+        ]);
+    }
+
+    private function createCardEndpoint(): void {
+        try {
+            $input = $this->requestData();
+            $payload = $this->sanitizeCardPayload($input, false);
+            $clientId = $this->ensureClientForPayload($payload, null);
+
+            $paymentData = [
+                'project_id' => $payload['payment']['project_id'] ?? null,
+                'client_id' => $clientId,
+                'kind' => 'one_time',
+                'amount' => $payload['payment']['amount'],
+                'currency' => $payload['payment']['currency'] ?? 'BRL',
+                'transaction_type' => 'receita',
+                'description' => $payload['payment']['description'] ?? null,
+                'category' => $payload['payment']['category'] ?? null,
+                'notes' => $payload['payment']['notes'] ?? null,
+                'due_date' => $payload['payment']['due_date'],
+                'paid_at' => null,
+                'status' => $this->mapBoardStatusToFinance($payload['status'] ?? null),
+            ];
+
+            $paymentId = $this->payments->create($paymentData);
+            if (!$paymentId) {
+                throw new RuntimeException('Falha ao criar a cobrança.');
+            }
+
+            $this->collectionBoard->ensureCard($paymentId, $this->currentUserId());
+            $options = [
+                'reason_code' => 'create_manual',
+                'notes' => $payload['movement_notes'] ?? null,
+            ];
+            if (($payload['status'] ?? '') === 'perdido') {
+                $options['lost_reason'] = $payload['lost_reason'] ?? null;
+                $options['lost_details'] = $payload['lost_details'] ?? null;
+            }
+            $this->collectionBoard->updateManualStatus($paymentId, $payload['status'], $options, $this->currentUserId());
+
+            $card = $this->collectionBoard->getCardDetails($paymentId);
+            $this->jsonResponse([
+                'success' => true,
+                'card' => $card,
+            ], 201);
+        } catch (InvalidArgumentException $e) {
+            $this->jsonError($e->getMessage(), 422);
+        } catch (Throwable $e) {
+            $this->jsonError('Não foi possível criar a cobrança.', 500);
+        }
+    }
+
+    private function showCardEndpoint(int $paymentId): void {
+        $this->detalhes($paymentId);
+    }
+
+    private function updateCardEndpoint(int $paymentId): void {
+        $existing = $this->payments->getById($paymentId);
+        if (!$existing) {
+            $this->jsonError('Cobrança não encontrada.', 404);
+        }
+
+        try {
+            $input = $this->requestData();
+            $payload = $this->sanitizeCardPayload($input, true);
+            $existingClientId = $existing['client_id'] ?? ($existing['project_client_id'] ?? null);
+            $clientId = $this->ensureClientForPayload($payload, $existingClientId);
+
+            $paymentData = [
+                'project_id' => array_key_exists('project_id', $payload['payment'])
+                    ? $payload['payment']['project_id']
+                    : ($existing['project_id'] ?? null),
+                'client_id' => $clientId,
+                'kind' => $existing['kind'] ?? 'one_time',
+                'amount' => $payload['payment']['amount'] ?? ($existing['amount'] ?? 0),
+                'currency' => $payload['payment']['currency'] ?? ($existing['currency'] ?? 'BRL'),
+                'transaction_type' => $existing['transaction_type'] ?? 'receita',
+                'description' => array_key_exists('description', $payload['payment'])
+                    ? $payload['payment']['description']
+                    : ($existing['description'] ?? null),
+                'category' => array_key_exists('category', $payload['payment'])
+                    ? $payload['payment']['category']
+                    : ($existing['category'] ?? null),
+                'notes' => array_key_exists('notes', $payload['payment'])
+                    ? $payload['payment']['notes']
+                    : ($existing['notes'] ?? null),
+                'due_date' => $payload['payment']['due_date'] ?? ($existing['due_date'] ?? null),
+                'paid_at' => $existing['paid_at'] ?? null,
+                'status_id' => $existing['status_id'] ?? null,
+            ];
+
+            if (!empty($payload['status'])) {
+                $paymentData['status'] = $this->mapBoardStatusToFinance($payload['status']);
+            }
+
+            $this->payments->update($paymentId, $paymentData);
+
+            if (!empty($payload['status'])) {
+                $options = [
+                    'reason_code' => $payload['status'] === 'perdido' ? 'lost_manual' : 'manual_update',
+                    'notes' => $payload['movement_notes'] ?? null,
+                ];
+                if ($payload['status'] === 'perdido') {
+                    $options['lost_reason'] = $payload['lost_reason'] ?? null;
+                    $options['lost_details'] = $payload['lost_details'] ?? null;
+                    if (empty($options['lost_reason'])) {
+                        throw new InvalidArgumentException('Selecione um motivo para a perda.');
+                    }
+                }
+                $this->collectionBoard->updateManualStatus($paymentId, $payload['status'], $options, $this->currentUserId());
+            }
+
+            $card = $this->collectionBoard->getCardDetails($paymentId);
+            $contacts = $this->collectionBoard->listContacts($paymentId);
+            $movements = $this->collectionBoard->listMovements($paymentId);
+
+            $this->jsonResponse([
+                'success' => true,
+                'card' => $card,
+                'contacts' => $contacts,
+                'movements' => $movements,
+            ]);
+        } catch (InvalidArgumentException $e) {
+            $this->jsonError($e->getMessage(), 422);
+        } catch (Throwable $e) {
+            $this->jsonError('Não foi possível atualizar a cobrança.', 500);
+        }
+    }
+
+    private function deleteCardEndpoint(int $paymentId): void {
+        if (!$this->payments->getById($paymentId)) {
+            $this->jsonError('Cobrança não encontrada.', 404);
+        }
+
+        try {
+            $this->payments->delete($paymentId);
+            $this->jsonResponse(['success' => true]);
+        } catch (Throwable $e) {
+            $this->jsonError('Não foi possível remover a cobrança.', 500);
+        }
     }
 
     public function move() {
@@ -232,7 +440,9 @@ class CobrancaController {
 
         $payment = $this->payments->getById($paymentId);
         $client = null;
-        if (!empty($payment['project_client_id'])) {
+        if (!empty($payment['client_id'])) {
+            $client = $this->clients->getById((int)$payment['client_id']);
+        } elseif (!empty($payment['project_client_id'])) {
             $client = $this->clients->getById((int)$payment['project_client_id']);
         }
 
@@ -246,6 +456,146 @@ class CobrancaController {
             'contacts' => $contacts,
             'movements' => $movements,
         ]);
+    }
+
+    private function sanitizeCardPayload(array $input, bool $isUpdate = false): array {
+        $payload = ['payment' => []];
+        $allowedStatuses = $this->boardStatusOptions();
+
+        if (!$isUpdate || array_key_exists('status', $input)) {
+            $status = trim((string)($input['status'] ?? ''));
+            if ($status === '' || !in_array($status, $allowedStatuses, true)) {
+                throw new InvalidArgumentException('Status inválido.');
+            }
+            $payload['status'] = $status;
+        }
+
+        if (!$isUpdate || array_key_exists('amount', $input)) {
+            $amount = Utils::decimalFromInput($input['amount'] ?? null);
+            if ($amount === null || $amount <= 0) {
+                throw new InvalidArgumentException('Informe um valor válido.');
+            }
+            $payload['payment']['amount'] = $amount;
+        }
+
+        if (!$isUpdate || array_key_exists('due_date', $input)) {
+            $dueDate = $this->normalizeDateInput($input['due_date'] ?? null);
+            if (!$dueDate) {
+                throw new InvalidArgumentException('Informe uma data de vencimento válida.');
+            }
+            $payload['payment']['due_date'] = $dueDate;
+        }
+
+        if (array_key_exists('currency', $input) || !$isUpdate) {
+            $currency = strtoupper(trim((string)($input['currency'] ?? 'BRL')));
+            if (!in_array($currency, ['BRL','USD'], true)) {
+                $currency = 'BRL';
+            }
+            $payload['payment']['currency'] = $currency;
+        }
+
+        if (array_key_exists('project_id', $input)) {
+            $payload['payment']['project_id'] = $input['project_id'] !== '' && $input['project_id'] !== null
+                ? (int)$input['project_id']
+                : null;
+        }
+
+        if (array_key_exists('client_id', $input)) {
+            $payload['payment']['client_id'] = $input['client_id'] !== '' && $input['client_id'] !== null
+                ? (int)$input['client_id']
+                : null;
+        }
+
+        foreach (['description', 'category'] as $field) {
+            if (array_key_exists($field, $input)) {
+                $value = Utils::sanitize($input[$field] ?? '');
+                $payload['payment'][$field] = $value !== '' ? $value : null;
+            }
+        }
+
+        if (array_key_exists('notes', $input)) {
+            $notesValue = trim((string)$input['notes']);
+            $payload['payment']['notes'] = $notesValue !== '' ? $notesValue : null;
+        }
+
+        $clientName = isset($input['client_name']) ? trim((string)$input['client_name']) : '';
+        $clientEmail = isset($input['client_email']) ? trim((string)$input['client_email']) : '';
+        $clientPhone = isset($input['client_phone']) ? trim((string)$input['client_phone']) : '';
+        if ($clientName !== '' || $clientEmail !== '' || $clientPhone !== '') {
+            $payload['client'] = [
+                'name' => Utils::sanitize($clientName),
+                'email' => Utils::sanitize($clientEmail),
+                'phone' => Utils::sanitize($clientPhone),
+            ];
+        }
+
+        if (isset($payload['status']) && $payload['status'] === 'perdido') {
+            $lostReason = $input['lost_reason'] ?? null;
+            if (!$isUpdate && empty($lostReason)) {
+                throw new InvalidArgumentException('Selecione um motivo para a perda.');
+            }
+            if ($lostReason !== null) {
+                $payload['lost_reason'] = $lostReason;
+            }
+            if (array_key_exists('lost_details', $input)) {
+                $details = trim((string)$input['lost_details']);
+                $payload['lost_details'] = $details !== '' ? $details : null;
+            }
+        }
+
+        if (array_key_exists('movement_notes', $input)) {
+            $movementNotes = trim((string)$input['movement_notes']);
+            $payload['movement_notes'] = $movementNotes !== '' ? $movementNotes : null;
+        }
+
+        return $payload;
+    }
+
+    private function ensureClientForPayload(array $payload, ?int $fallbackId): int {
+        $clientId = $payload['payment']['client_id'] ?? null;
+        if ($clientId) {
+            return (int)$clientId;
+        }
+        if ($fallbackId) {
+            return (int)$fallbackId;
+        }
+
+        $clientData = $payload['client'] ?? null;
+        if (!$clientData || empty($clientData['name'])) {
+            throw new InvalidArgumentException('Selecione ou informe um cliente.');
+        }
+
+        $clientPayload = [
+            'name' => $clientData['name'],
+            'email' => $clientData['email'] ?? null,
+            'phone' => $clientData['phone'] ?? null,
+            'entry_date' => date('Y-m-d'),
+            'notes' => null,
+        ];
+
+        $newId = $this->clients->create($clientPayload);
+        if (!$newId) {
+            throw new RuntimeException('Não foi possível criar o cliente.');
+        }
+        return (int)$newId;
+    }
+
+    private function boardStatusOptions(): array {
+        return array_keys($this->columnMeta());
+    }
+
+    private function mapBoardStatusToFinance(?string $status): ?string {
+        if ($status === null) {
+            return null;
+        }
+        $map = [
+            'a_vencer' => 'A Receber',
+            'vencendo' => 'Pendente',
+            'vencido' => 'Em Atraso',
+            'em_cobranca' => 'Em Cobrança',
+            'perdido' => 'Perdido',
+        ];
+        return $map[$status] ?? null;
     }
 
     public function criar() {
